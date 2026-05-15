@@ -48,6 +48,21 @@ export const usePlayerStore = defineStore('player', () => {
     setCurrentIndex(insert_pos + (start_index ?? 0));
   }
 
+  // 替换播放列表为整张专辑曲目，从指定曲目开始播放
+  function playAlbumTracks(tracks, start_index) {
+    const preview_tracks = tracks.filter(t => t.file_type === 'preview');
+    if (preview_tracks.length === 0) return;
+
+    playlist.value = [...preview_tracks];
+    setCurrentIndex(start_index ?? 0);
+  }
+
+  // 在播放列表中查找曲目并跳转
+  function jumpToTrack(file_id) {
+    const idx = playlist.value.findIndex(t => t.file_id === file_id);
+    if (idx >= 0) setCurrentIndex(idx);
+  }
+
   function setCurrentIndex(index) {
     if (index >= 0 && index < playlist.value.length) {
       current_index.value = index;
@@ -132,6 +147,8 @@ export const usePlayerStore = defineStore('player', () => {
     current_track,
     playlist_length,
     addAlbumTracks,
+    playAlbumTracks,
+    jumpToTrack,
     setCurrentIndex,
     togglePlay,
     prev,

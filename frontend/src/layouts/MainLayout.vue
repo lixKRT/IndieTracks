@@ -100,5 +100,6 @@ export default {
 <style scoped>
 .layout-main {
   min-height: calc(100vh - 200px);
+  padding-bottom: 80px; /* 给固定底部的播放器留空间 */
 }
 </style>

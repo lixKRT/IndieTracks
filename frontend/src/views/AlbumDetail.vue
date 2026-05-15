@@ -96,12 +96,12 @@ export default {
     },
     handlePreview(tracks, startIndex) {
       const player = usePlayerStore();
-      player.addAlbumTracks(tracks, startIndex);
+      player.playAlbumTracks(tracks, startIndex);
     },
     playAll() {
       if (this.album?.tracks) {
         const player = usePlayerStore();
-        player.addAlbumTracks(this.album.tracks, 0);
+        player.playAlbumTracks(this.album.tracks, 0);
       }
     },
     addComment(content) {

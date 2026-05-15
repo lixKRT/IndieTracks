@@ -1,15 +1,121 @@
-<!-- 分类浏览页 — 占位 -->
+<!-- 分类浏览页 -->
 <template>
-  <div class="container tag-page">
-    <div class="loading-container">
+  <div class="tag-page container">
+    <h1 class="page-title">标签</h1>
+
+    <TagFilter
+      :tags="allTags"
+      :selectedTag="filterTag"
+      :selectedPrice="filterPrice"
+      @update:tag="onTagChange"
+      @update:price="onPriceChange"
+    />
+
+    <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
-      <p>分类浏览页 — 即将实现</p>
+      <p>加载中...</p>
+    </div>
+
+    <div v-else-if="albums.length === 0" class="empty-state">
+      <p>没有找到匹配的专辑</p>
+    </div>
+
+    <div v-else class="album-grid">
+      <AlbumCard
+        v-for="album in albums"
+        :key="album.album_id"
+        :album="album"
+        @album-click="goToAlbum"
+        @circle-click="goToCircle"
+        @tag-click="onTagChange"
+        @preview="handlePreview"
+      />
     </div>
   </div>
 </template>
 
 <script>
+import AlbumCard from '../components/molecules/AlbumCard.vue';
+import TagFilter from '../components/organisms/TagFilter.vue';
+import { fetchAlbums, getTags, fetchAlbum } from '../api/mock.js';
+import { usePlayerStore } from '../stores/player.js';
+
 export default {
-  name: 'TagBrowseView'
+  name: 'TagBrowseView',
+  components: { AlbumCard, TagFilter },
+  data() {
+    return {
+      allTags: getTags(),
+      filterTag: '',
+      filterPrice: '',
+      albums: [],
+      loading: true
+    };
+  },
+  watch: {
+    filterTag() { this.loadAlbums(); },
+    filterPrice() { this.loadAlbums(); },
+    '$route.query'() { this.syncFromQuery(); }
+  },
+  async mounted() {
+    this.syncFromQuery();
+  },
+  methods: {
+    syncFromQuery() {
+      const q = this.$route.query;
+      if (q.tag !== undefined) this.filterTag = q.tag || '';
+      if (q.price !== undefined) this.filterPrice = q.price || '';
+      if (q.search !== undefined) this.searchQuery = q.search || '';
+      this.loadAlbums();
+    },
+    async loadAlbums() {
+      this.loading = true;
+      try {
+        const params = { page_size: 48 };
+        if (this.filterTag) params.tag = this.filterTag;
+        if (this.filterPrice) params.price = this.filterPrice;
+        if (this.searchQuery) params.search = this.searchQuery;
+        const result = await fetchAlbums(params);
+        this.albums = result.data;
+      } catch (e) {
+        console.error('加载专辑失败:', e);
+      } finally {
+        this.loading = false;
+      }
+    },
+    onTagChange(tag) {
+      this.filterTag = tag;
+      this.$router.replace({ query: { ...this.$route.query, tag: tag || undefined } });
+    },
+    onPriceChange(price) {
+      this.filterPrice = price;
+      this.$router.replace({ query: { ...this.$route.query, price: price || undefined } });
+    },
+    goToAlbum(album) { this.$router.push(`/album/${album.album_id}`); },
+    goToCircle(album) { this.$router.push(`/label/${album.circle_id}`); },
+    handlePreview(album) {
+      fetchAlbum(album.album_id).then(detail => {
+        const player = usePlayerStore();
+        player.playAlbumTracks(detail.tracks, 0);
+      });
+    }
+  }
 };
 </script>
+
+<style scoped>
+.tag-page { padding-top: var(--spacing-xl); }
+.page-title { font-size: 1.8rem; color: var(--color-text-primary); margin-bottom: var(--spacing-xl); }
+
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  column-gap: 5%;
+  row-gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-md);
+}
+
+@media (max-width: 639px) {
+  .album-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>

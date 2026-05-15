@@ -1,6 +1,6 @@
 <!-- 曲目行（分子） -->
 <template>
-  <div class="track-row" :class="{ active: is_current }">
+  <div class="track-row" :class="{ active: is_current }" @click="$emit('preview', track, index)">
     <span class="track-index">{{ pad(index + 1) }}</span>
     <span class="track-name">{{ track.file_name }}</span>
     <span class="track-duration">{{ track.duration }}</span>
@@ -33,7 +33,7 @@ export default {
   gap: var(--spacing-sm);
   padding: 0.6rem var(--spacing-md);
   transition: background var(--transition-fast);
-  cursor: default;
+  cursor: pointer;
 }
 
 .track-row:hover { background: rgba(255, 255, 255, 0.02); }
@@ -55,8 +55,10 @@ export default {
   justify-content: center;
   cursor: pointer;
   transition: all var(--transition-fast);
+  opacity: 0;
 }
 
-.track-preview-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
-.active .track-preview-btn { border-color: var(--color-accent); color: var(--color-accent); }
+.track-row:hover .track-preview-btn { opacity: 1; }
+.track-preview-btn:hover { border-color: var(--color-accent); color: var(--color-accent); opacity: 1; }
+.active .track-preview-btn { border-color: var(--color-accent); color: var(--color-accent); opacity: 1; }
 </style>
