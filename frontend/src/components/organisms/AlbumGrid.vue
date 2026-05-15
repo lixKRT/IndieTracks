@@ -1,6 +1,6 @@
 <!-- 专辑网格（有机体） -->
 <template>
-  <div class="album-grid-container container">
+  <div class="album-grid-container">
     <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
       <p>加载中...</p>
@@ -16,7 +16,7 @@
         :key="album.album_id"
         :album="album"
         @album-click="album => $emit('album-click', album)"
-        @circle-click="name => $emit('circle-click', name)"
+        @circle-click="album => $emit('circle-click', album)"
         @tag-click="tag => $emit('tag-click', tag)"
         @preview="album => $emit('preview', album)"
       />
@@ -63,13 +63,13 @@ export default {
 
 @media (min-width: 640px) {
   .album-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (min-width: 1024px) {
   .album-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

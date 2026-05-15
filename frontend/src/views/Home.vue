@@ -15,7 +15,7 @@
 
 <script>
 import AlbumGrid from '../components/organisms/AlbumGrid.vue';
-import { fetchAlbums } from '../api/mock.js';
+import { fetchAlbums, fetchAlbum } from '../api/mock.js';
 import { usePlayerStore } from '../stores/player.js';
 
 export default {
@@ -43,9 +43,8 @@ export default {
     goToAlbum(album) {
       this.$router.push(`/album/${album.album_id}`);
     },
-    goToCircle(circleName) {
-      // 通过名字查找社团，后续可以改为 circle_id 跳转
-      alert(`跳转到社团: ${circleName}`);
+    goToCircle(album) {
+      this.$router.push(`/label/${album.circle_id}`);
     },
     filterByTag(tag) {
       this.$router.push({ path: '/tag', query: { tag } });
