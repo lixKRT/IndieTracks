@@ -32,7 +32,8 @@ CREATE TABLE if not exists user_circles (
 CREATE TABLE if not exists albums (
     album_id SERIAL PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
-    description TEXT,
+    info_title TEXT,
+    info_content TEXT,
     price DECIMAL(10,2) DEFAULT 0,
     cover_url VARCHAR(500),
     publish_date TIMESTAMP DEFAULT NOW()
