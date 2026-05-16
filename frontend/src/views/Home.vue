@@ -39,7 +39,7 @@ export default {
       alert(`正在试听 ${album.title}`);
     },
     goToAlbum(album) {
-      alert(`跳转到专辑: ${album.title}`);
+      this.$router.push(`/album/${album.id}`);
     },
     goToArtist(artistName) {
       alert(`跳转到艺术家: ${artistName}`);
