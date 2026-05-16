@@ -29,27 +29,6 @@ export default {
       maxVisible: 6
     };
   },
-<<<<<<< HEAD
-  methods: {
-    purchaseAlbum(album) {
-      if (album.free) {
-        alert(`已下载 ${album.title}`);
-      } else {
-        alert(`正在购买 ${album.title} - ¥${album.price}`);
-      }
-    },
-    previewAlbum(album) {
-      alert(`正在试听 ${album.title}`);
-    },
-    goToAlbum(album) {
-      this.$router.push(`/album/${album.id}`);
-    },
-    goToArtist(artistName) {
-      alert(`跳转到艺术家: ${artistName}`);
-    },
-    filterByTag(tag) {
-      alert(`按标签筛选: ${tag}`);
-=======
   async mounted() {
     try {
       const result = await fetchAlbums({ page_size: 48 });
@@ -58,7 +37,6 @@ export default {
       console.error('加载专辑列表失败:', e);
     } finally {
       this.loading = false;
->>>>>>> e22caadf4fa3fe0be6537cd789b14104afc5c0bc
     }
   },
   methods: {

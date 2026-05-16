@@ -8,12 +8,6 @@
 **Tree:**
 ```
 DIR: .git
-<<<<<<< HEAD
-  FILE: FETCH_HEAD
-  FILE: HEAD
-  FILE: config
-  FILE: description
-=======
   FILE: COMMIT_EDITMSG
   FILE: FETCH_HEAD
   FILE: HEAD
@@ -21,22 +15,16 @@ DIR: .git
   FILE: config
   FILE: description
   DIR: gk
->>>>>>> e22caadf4fa3fe0be6537cd789b14104afc5c0bc
   DIR: hooks
   FILE: index
   DIR: info
   DIR: logs
   DIR: objects
-<<<<<<< HEAD
   FILE: packed-refs
-  DIR: refs
-  FILE: sourcetreeconfig.json
-=======
   DIR: refs
   FILE: sourcetreeconfig.json
 DIR: .vscode
   FILE: settings.json
->>>>>>> e22caadf4fa3fe0be6537cd789b14104afc5c0bc
 DIR: backend
   FILE: .gitattributes
   FILE: .gitignore
@@ -46,12 +34,6 @@ DIR: backend
   FILE: pom.xml
   DIR: src
 DIR: crawler
-<<<<<<< HEAD
-  DIR: .idea
-  DIR: indietracks_spider
-  FILE: main.py
-  FILE: scrapy.cfg
-=======
   DIR: .deepseek
   DIR: .idea
   DIR: env
@@ -59,7 +41,6 @@ DIR: crawler
   FILE: main.py
   FILE: scrapy.cfg
 DIR: data
->>>>>>> e22caadf4fa3fe0be6537cd789b14104afc5c0bc
 DIR: database
   FILE: init.sql
 DIR: docs
@@ -76,14 +57,9 @@ DIR: frontend
   DIR: public
   DIR: src
   FILE: vite.config.js
-<<<<<<< HEAD
 FILE: package-lock.json
-DIR: scripts
-  DIR: windows
-=======
 DIR: scripts
   DIR: linux
   DIR: windows
 DIR: tools
->>>>>>> e22caadf4fa3fe0be6537cd789b14104afc5c0bc
 ```
