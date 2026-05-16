@@ -38,7 +38,8 @@ erDiagram
     Album {
         int album_id PK
         varchar title
-        text description
+        text info_title
+        text info_content
         decimal price
         varchar cover_url
         timestamp publish_date
@@ -119,7 +120,8 @@ CREATE TABLE user_circles (
 CREATE TABLE albums (
     album_id SERIAL PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
-    description TEXT,
+    info_title TEXT,
+    info_content TEXT,
     price DECIMAL(10,2) DEFAULT 0,
     cover_url VARCHAR(500),
     publish_date TIMESTAMP DEFAULT NOW()
