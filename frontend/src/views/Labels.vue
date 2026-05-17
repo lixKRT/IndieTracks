@@ -1,19 +1,22 @@
-<!-- 社团列表页 -->
 <template>
-  <div class="labels-page container">
-    <h1 class="page-title">社团</h1>
+  <div class="labels-page container-wide">
+    <div class="page-header">
+      <h1 class="page-title">社团</h1>
+      <p class="page-subtitle">发现独立电子音乐厂牌与创作团体</p>
+    </div>
 
     <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
       <p>加载中...</p>
     </div>
 
-    <div v-else class="circle-list">
+    <div v-else class="circle-grid">
       <CircleCard
         v-for="c in circles"
         :key="c.circle_id"
         :circle="c"
         @click="goToCircle(c)"
+        @tag-click="goToTag"
       />
     </div>
   </div>
@@ -40,13 +43,52 @@ export default {
     }
   },
   methods: {
-    goToCircle(c) { this.$router.push(`/label/${c.circle_id}`); }
+    goToCircle(c) {
+      this.$router.push(`/label/${c.circle_id}`);
+    },
+    goToTag(tag) {
+      this.$router.push({ path: '/tag', query: { tag } });
+    }
   }
 };
 </script>
 
 <style scoped>
-.labels-page { padding-top: var(--spacing-xl); }
-.page-title { font-size: 1.8rem; color: var(--color-text-primary); margin-bottom: var(--spacing-xl); }
-.circle-list { display: flex; flex-direction: column; gap: var(--spacing-md); }
+.labels-page {
+  padding-top: var(--spacing-xl);
+  padding-bottom: var(--spacing-2xl);
+}
+
+.page-header {
+  margin-bottom: var(--spacing-xl);
+  text-align: center;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.page-subtitle {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+/* 桌面端单列布局，每个卡片占满宽度 */
+.circle-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+  max-width: 1000px;
+  margin: 0 auto; /* 可选居中，让卡片不占满全屏太宽 */
+}
+
+/* 如果希望占满全屏更宽，可以去掉 max-width */
+@media (max-width: 768px) {
+  .circle-grid {
+    gap: var(--spacing-lg);
+  }
+}
 </style>

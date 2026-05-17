@@ -670,24 +670,49 @@ export async function fetchAlbum(album_id) {
 }
 
 /**
- * 社团列表
+ * 社团列表（增强版：补充最新专辑日期、代表性标签）
  */
 export async function fetchCircles(params = {}) {
   await delay();
 
-  const data = circles.map(c => {
-    const circle_albums = getCircleAlbums(c.circle_id);
+  const enhancedCircles = circles.map(c => {
+    const circleAlbums = getCircleAlbums(c.circle_id);
+
+    // 最新专辑日期
+    let latestAlbumDate = null;
+    if (circleAlbums.length > 0) {
+      const sorted = [...circleAlbums].sort((a, b) => new Date(b.publish_date) - new Date(a.publish_date));
+      latestAlbumDate = sorted[0].publish_date;
+    }
+
+    // 统计标签频率，取前3
+    const tagFreq = new Map();
+    circleAlbums.forEach(album => {
+      album.tag_ids.forEach(tid => {
+        const tagName = getTag(tid)?.name;
+        if (tagName) {
+          tagFreq.set(tagName, (tagFreq.get(tagName) || 0) + 1);
+        }
+      });
+    });
+    const representativeTags = Array.from(tagFreq.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([name]) => name);
+
     return {
       circle_id: c.circle_id,
       name: c.name,
       logo_url: c.logo_url,
       description: c.description,
-      album_count: circle_albums.length,
-      member_count: getCircleMembers(c.circle_id).length
+      album_count: circleAlbums.length,
+      member_count: getCircleMembers(c.circle_id).length,
+      latest_album_date: latestAlbumDate,
+      representative_tags: representativeTags
     };
   });
 
-  return { data };
+  return { data: enhancedCircles };
 }
 
 /**
