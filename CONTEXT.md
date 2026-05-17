@@ -28,6 +28,18 @@
 - **数据层**：PostgreSQL 18 + MinIO 对象存储
 - **爬虫**：Scrapy，目标站 Dizzylab
 
+### Dizzylab 目标页面
+
+| 页面 | URL |
+|:---|:---|
+| 首页（专辑列表） | `https://www.dizzylab.net/` |
+| 专辑详情 | `https://www.dizzylab.net/d/SW20/` |
+| 社团列表 | `https://www.dizzylab.net/label/` |
+| 社团详情 | `https://www.dizzylab.net/l/Static%20World/` |
+| 用户已购专辑 | `https://www.dizzylab.net/u/72259/music/` |
+| 用户收藏 | `https://www.dizzylab.net/u/72259/likes/` |
+| 用户关注 | `https://www.dizzylab.net/u/72259/following/` |
+
 ## 数据模型要点
 
 - 专辑由社团发布（`album_circles`），不由用户直接发布

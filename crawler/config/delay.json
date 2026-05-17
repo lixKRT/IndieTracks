@@ -1,0 +1,23 @@
+{
+  "active": "test",
+  "strategies": {
+    "default": {
+      "download_delay": 3,
+      "between_albums_min": 60,
+      "between_albums_random": 60,
+      "concurrent_requests_per_domain": 1
+    },
+    "gentle": {
+      "download_delay": 5,
+      "between_albums_min": 120,
+      "between_albums_random": 120,
+      "concurrent_requests_per_domain": 1
+    },
+    "test": {
+      "download_delay": 1,
+      "between_albums_min": 10,
+      "between_albums_random": 10,
+      "concurrent_requests_per_domain": 1
+    }
+  }
+}

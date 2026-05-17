@@ -1,87 +1,46 @@
-# Scrapy settings for indietracks_spider project
-#
-# For simplicity, this file contains only settings considered important or
-# commonly used. You can find more settings consulting the documentation:
-#
-#     https://docs.scrapy.org/en/latest/topics/settings.html
-#     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-#     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+"""Scrapy settings — 从 config JSON 动态加载。"""
+
+import sys
+from pathlib import Path
+
+# 确保 crawler/ 在路径中，以便 import indietracks_spider.*
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from indietracks_spider.utils.config_loader import get_delay_config
 
 BOT_NAME = "indietracks_spider"
-
 SPIDER_MODULES = ["indietracks_spider.spiders"]
 NEWSPIDER_MODULE = "indietracks_spider.spiders"
 
-ADDONS = {}
+# ── 延迟策略（从 config/delay.json 读取） ──────────────────
+_delay = get_delay_config()
 
+DOWNLOAD_DELAY = _delay["download_delay"]
+CONCURRENT_REQUESTS_PER_DOMAIN = _delay["concurrent_requests_per_domain"]
 
-# Crawl responsibly by identifying yourself (and your website) on the user-agent
-#USER_AGENT = "indietracks_spider (+http://www.yourdomain.com)"
+# ── 基础反爬 ──────────────────────────────────────────────
+ROBOTSTXT_OBEY = False  # dizzylab robots.txt 禁用 /*?* 导致 API 全被封
+COOKIES_ENABLED = False
 
-# Obey robots.txt rules
-ROBOTSTXT_OBEY = True
+DEFAULT_REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/131.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+}
 
-# Concurrency and throttling settings
-#CONCURRENT_REQUESTS = 16
-CONCURRENT_REQUESTS_PER_DOMAIN = 1
-DOWNLOAD_DELAY = 1
+# ── Pipeline ──────────────────────────────────────────────
+ITEM_PIPELINES = {
+    "indietracks_spider.pipelines.PostgresPipeline": 300,
+}
 
-# Disable cookies (enabled by default)
-#COOKIES_ENABLED = False
+# ── 日志 ──────────────────────────────────────────────────
+LOG_LEVEL = "INFO"
 
-# Disable Telnet Console (enabled by default)
-#TELNETCONSOLE_ENABLED = False
-
-# Override the default request headers:
-#DEFAULT_REQUEST_HEADERS = {
-#    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-#    "Accept-Language": "en",
-#}
-
-# Enable or disable spider middlewares
-# See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
-#SPIDER_MIDDLEWARES = {
-#    "indietracks_spider.middlewares.IndietracksSpiderSpiderMiddleware": 543,
-#}
-
-# Enable or disable downloader middlewares
-# See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    "indietracks_spider.middlewares.IndietracksSpiderDownloaderMiddleware": 543,
-#}
-
-# Enable or disable extensions
-# See https://docs.scrapy.org/en/latest/topics/extensions.html
-#EXTENSIONS = {
-#    "scrapy.extensions.telnet.TelnetConsole": None,
-#}
-
-# Configure item pipelines
-# See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-#ITEM_PIPELINES = {
-#    "indietracks_spider.pipelines.IndietracksSpiderPipeline": 300,
-#}
-
-# Enable and configure the AutoThrottle extension (disabled by default)
-# See https://docs.scrapy.org/en/latest/topics/autothrottle.html
-#AUTOTHROTTLE_ENABLED = True
-# The initial download delay
-#AUTOTHROTTLE_START_DELAY = 5
-# The maximum download delay to be set in case of high latencies
-#AUTOTHROTTLE_MAX_DELAY = 60
-# The average number of requests Scrapy should be sending in parallel to
-# each remote server
-#AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
-# Enable showing throttling stats for every response received:
-#AUTOTHROTTLE_DEBUG = False
-
-# Enable and configure HTTP caching (disabled by default)
-# See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
-#HTTPCACHE_ENABLED = True
-#HTTPCACHE_EXPIRATION_SECS = 0
-#HTTPCACHE_DIR = "httpcache"
-#HTTPCACHE_IGNORE_HTTP_CODES = []
-#HTTPCACHE_STORAGE = "scrapy.extensions.httpcache.FilesystemCacheStorage"
-
-# Set settings whose default value is deprecated to a future-proof value
+# ── 其他 ──────────────────────────────────────────────────
 FEED_EXPORT_ENCODING = "utf-8"
+RETRY_TIMES = 3
+RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429]
