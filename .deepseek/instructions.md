@@ -20,7 +20,6 @@ DIR: .git
   DIR: info
   DIR: logs
   DIR: objects
-  FILE: packed-refs
   DIR: refs
   FILE: sourcetreeconfig.json
 DIR: .vscode
@@ -57,7 +56,6 @@ DIR: frontend
   DIR: public
   DIR: src
   FILE: vite.config.js
-FILE: package-lock.json
 DIR: scripts
   DIR: linux
   DIR: windows
