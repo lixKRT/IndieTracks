@@ -23,6 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
+<<<<<<< HEAD
+node_modules
+=======
 .deepseek
 data
 .vscode
@@ -33,3 +36,4 @@ crawler\.idea
 
 backend\.idea
 backend\target
+>>>>>>> c2c61138e81fc1eaee4f11091f680677846037f8
