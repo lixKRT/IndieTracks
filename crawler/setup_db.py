@@ -1,7 +1,7 @@
 """执行 create_database.sql 建表脚本。"""
 import psycopg2, sys
 
-SQL_PATH = r"E:\Project\IndieTracks\database\create_database.sql"
+SQL_PATH = r"..\database\create_database.sql"
 
 with open(SQL_PATH, "r", encoding="utf-8") as f:
     sql = f.read()
