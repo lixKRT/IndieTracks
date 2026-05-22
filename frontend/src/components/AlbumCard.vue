@@ -21,9 +21,14 @@
             @{{ album.artist }}
           </div>
         </div>
-        <div class="favorite-btn" @click.stop="toggleFavorite">
-          <i class="fa-star" :class="favorited ? 'fas' : 'far'"></i>
-        </div>
+        <button 
+          class="favorite-btn" 
+          :class="{ 'is-favorited': isFavorite }"
+          @click.stop="toggleFavorite"
+          :title="isFavorite ? '取消收藏' : '收藏'"
+        >
+          {{ isFavorite ? '★' : '☆' }}
+        </button>
       </div>
 
       <div class="play-controls">
@@ -51,6 +56,8 @@
 </template>
 
 <script>
+import { useFavoriteStore } from '../stores/favorite.js';
+
 export default {
   name: 'AlbumCard',
   props: {
@@ -59,16 +66,23 @@ export default {
       required: true
     }
   },
-  emits: ['album-click', 'artist-click', 'tag-click', 'preview', 'favorite'],
+  emits: ['album-click', 'artist-click', 'tag-click', 'preview'],
   data() {
     return {
-      favorited: false
+      favoriteStore: useFavoriteStore()
     };
+  },
+  computed: {
+    isFavorite() {
+      // 假设 album 有 id 或 album_id 作为唯一标识
+      const albumId = this.album.id || this.album.album_id;
+      return this.favoriteStore.isFavorite(albumId);
+    }
   },
   methods: {
     toggleFavorite() {
-      this.favorited = !this.favorited;
-      this.$emit('favorite', { album: this.album, favorited: this.favorited });
+      const albumId = this.album.id || this.album.album_id;
+      this.favoriteStore.toggleFavorite(albumId);
     }
   }
 };
@@ -120,19 +134,22 @@ export default {
 .favorite-btn {
   flex-shrink: 0;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   padding: 0 0 0 0.5rem;
-  transition: transform 0.2s;
+  transition: all var(--transition-fast);
   line-height: 1;
-}
-.favorite-btn .fa-star {
+  background: none;
+  border: none;
   color: #666;
 }
-.favorite-btn .fa-star.fas {
-  color: #f5c518;
-}
+
 .favorite-btn:hover {
   transform: scale(1.25);
+  color: #FFD700;
+}
+
+.favorite-btn.is-favorited {
+  color: #FFD700;
 }
 
 .album-title {
