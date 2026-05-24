@@ -33,3 +33,13 @@ def get_delay_config() -> dict[str, Any]:
 def get_database_config() -> dict[str, str]:
     """读取数据库连接配置。返回 dict 含 host/port/database/user/password。"""
     return load_json("database.json")
+
+
+def get_spider_config() -> dict[str, Any]:
+    """读取爬虫行为配置。返回 dict 含 mode (full/incremental) 和 max_albums。"""
+    return load_json("spider.json")
+
+
+def get_minio_config() -> dict[str, Any]:
+    """读取 MinIO 连接配置。"""
+    return load_json("minio.json")
