@@ -39,32 +39,20 @@
         </div>
       </section>
 
-      <!-- 专辑列表 -->
       <section v-if="circle.albums.length > 0" class="detail-section">
         <h2 class="section-title">
           <i class="fas fa-music"></i> 专辑作品
         </h2>
-        <div class="album-list">
-          <div
-            v-for="a in circle.albums"
-            :key="a.album_id"
-            class="album-row"
-          >
-            <div class="album-cover" @click="$router.push(`/album/${a.album_id}`)">
-              <img :src="a.cover_url" :alt="a.title">
-            </div>
-            <div class="album-info" @click="$router.push(`/album/${a.album_id}`)">
-              <div class="album-title">{{ a.title }}</div>
-              <div class="album-meta">{{ a.track_count }} 首 · {{ a.tags.slice(0, 3).join(' · ') }}</div>
-            </div>
-            <div class="album-actions">
-              <button class="album-play-btn" @click.stop="addToPlaylist(a)" title="添加到播放列表">
-                <i class="fas fa-play"></i>
-              </button>
-              <span v-if="a.price > 0" class="album-price">¥{{ a.price }}</span>
-              <span v-else class="album-price free">免费</span>
-            </div>
-          </div>
+        <div class="albums-grid">
+          <AlbumCard
+            v-for="album in enhancedAlbums"
+            :key="album.album_id"
+            :album="album"
+            @album-click="goToAlbum"
+            @circle-click="goToCircleFromAlbum"
+            @tag-click="goToTag"
+            @preview="handlePreview"
+          />
         </div>
       </section>
     </template>
@@ -74,11 +62,23 @@
 <script>
 import { fetchCircle, fetchAlbum } from '../api/mock.js';
 import { usePlayerStore } from '../stores/player.js';
+import AlbumCard from '../components/molecules/AlbumCard.vue';
 
 export default {
   name: 'LabelDetailView',
+  components: { AlbumCard },
   data() {
     return { circle: null, loading: true };
+  },
+  computed: {
+    // 为每个专辑添加 circle_logo_url 字段，以匹配 AlbumCard 所需的数据结构
+    enhancedAlbums() {
+      if (!this.circle) return [];
+      return this.circle.albums.map(album => ({
+        ...album,
+        circle_logo_url: this.circle.logo_url  // 补充社团Logo
+      }));
+    }
   },
   async mounted() {
     try {
@@ -91,7 +91,16 @@ export default {
     }
   },
   methods: {
-    async addToPlaylist(album) {
+    goToAlbum(album) {
+      this.$router.push(`/album/${album.album_id}`);
+    },
+    goToCircleFromAlbum(album) {
+      this.$router.push(`/label/${album.circle_id}`);
+    },
+    goToTag(tag) {
+      this.$router.push({ path: '/tag', query: { tag } });
+    },
+    async handlePreview(album) {
       try {
         const detail = await fetchAlbum(album.album_id);
         const player = usePlayerStore();
@@ -242,110 +251,18 @@ export default {
   color: var(--color-text-dim);
 }
 
-/* 专辑列表 */
-.album-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
+
+.albums-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-xl);
 }
 
-.album-row {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-lg);
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  padding: var(--spacing-md);
-  transition: all 0.2s ease;
-}
 
-.album-row:hover {
-  background: var(--color-bg-secondary);
-  border-color: var(--color-accent);
-  transform: translateX(4px);
-}
-
-.album-cover {
-  flex-shrink: 0;
-  width: 60px;
-  height: 60px;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.album-cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.2s;
-}
-
-.album-cover:hover img {
-  transform: scale(1.05);
-}
-
-.album-info {
-  flex: 1;
-  cursor: pointer;
-  min-width: 0;
-}
-
-.album-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.album-meta {
-  font-size: 0.75rem;
-  color: var(--color-text-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.album-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  flex-shrink: 0;
-}
-
-.album-play-btn {
-  background: none;
-  border: 1px solid var(--color-border-light);
-  color: var(--color-text-muted);
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.album-play-btn:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  background: rgba(255,107,107,0.1);
-}
-
-.album-price {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--color-accent);
-}
-
-.album-price.free {
-  color: #4caf50;
-}
-
-/* 响应式 */
 @media (max-width: 768px) {
+  .albums-grid {
+    grid-template-columns: 1fr;
+  }
   .detail-header {
     flex-direction: column;
     text-align: center;
@@ -356,12 +273,6 @@ export default {
   }
   .detail-stats {
     justify-content: center;
-  }
-  .album-row {
-    flex-wrap: wrap;
-  }
-  .album-actions {
-    margin-left: auto;
   }
 }
 </style>
