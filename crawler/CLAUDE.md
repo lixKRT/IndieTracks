@@ -26,7 +26,7 @@ scrapy crawl user_pages -a user_ids=2,3  # 用户维页面（指定用户）
 | 文件 | 用途 | 关键字段 |
 |:---|:---|:---|
 | `database.json` | PG 连接 | host/port/database/user/password |
-| `spider.json` | 爬虫行为控制 | `mode` (full/incremental), `max_albums` (50), `max_users` (20) |
+| `spider.json` | 爬虫行为控制 | `mode` (full/incremental), `max_albums` (50), `max_users` (10) |
 | `delay.json` | 延迟策略 | `download_delay`, `between_albums_min/random`, `between_tracks_min/random_max` |
 | `minio.json` | MinIO 连接 | endpoint/access_key/secret_key/bucket/prefixes |
 
@@ -146,7 +146,7 @@ _after_album_detail → reactor.callLater(wait, _schedule_next) ← 不阻塞 re
 | 12 | `circle_follows` | `ON CONFLICT DO NOTHING` |
 | 13 | `user_follows` | `ON CONFLICT DO NOTHING`（预留，dizzylab 无此功能） |
 
-**临时字段解析：** Pipeline `_resolve_refs` 将 `_dizzylab_id` / `_dizzylab_user_id` / `_dizzylab_labelid` / `_tag_name` 等临时字段通过内存缓存映射为 DB 主键。所有临时字段已在 `items.py` 中定义。
+**临时字段解析：** Pipeline `_resolve_refs` 将 `_dizzylab_id` / `_dizzylab_user_id` / `_dizzylab_labelid` / `_tag_name` 等临时字段通过内存缓存映射为 DB 主键。`circle_id` 缓存未命中时，`_lookup_circle()` 会从 DB 回退查询并回填缓存（解决 circle_members 等独立进程运行时的空缓存问题）。所有临时字段已在 `items.py` 中定义。
 
 ## 错误处理
 

@@ -1,2 +1,4 @@
 /database/minio-data
 /.vscode/
+/tools\minio\minio.exe
+/tools\minio\mc.exe

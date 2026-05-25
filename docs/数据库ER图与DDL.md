@@ -1,6 +1,6 @@
 # IndieTracks 数据库 ER 图与 DDL
 
-> 更新：2026-05-25
+> 更新：2026-05-26
 > PostgreSQL 18，14 张表
 
 ---

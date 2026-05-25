@@ -6,7 +6,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 IndieTracks is an indie music showcase and preview platform (reference: dizzylab.net). Three-tier architecture: Vue 3 frontend, Spring Boot backend, Scrapy crawler for dizzylab data.
 
-> **Crawler 相关请查看 `crawler/CLAUDE.md`。**
+> **Crawler 相关 → `crawler/CLAUDE.md` | 脚本相关 → `scripts/CLAUDE.md` | 数据库设计 → `docs/数据库ER图与DDL.md`**
 
 ## Tech Stack
 
@@ -33,10 +33,11 @@ cd backend
 ./mvnw clean compile             # Compile only
 ```
 
-### Database
+### Crawler & Database
 ```bash
-psql -U postgres -d indietracks -f database/create_database.sql  # Create tables
-psql -U postgres -d indietracks -f database/init.sql             # Clear all data, reset sequences
+python scripts/windows/run-crawlers.py       # 爬虫启动器（一键）
+python scripts/windows/setup-database.py     # 建库建表
+python scripts/windows/setup-minio.py        # MinIO 部署
 ```
 
 ## Project Structure
@@ -44,32 +45,25 @@ psql -U postgres -d indietracks -f database/init.sql             # Clear all dat
 ```
 IndieTracks/
 ├── frontend/              # Vue 3 SPA
-│   └── src/
-│       ├── api/mock.js    # Central mock data layer (all APIs return Promise with delay)
-│       ├── components/    # Atomic design: molecules/ → organisms/
-│       │   ├── molecules/ # AlbumCard, TrackRow, CommentItem, CircleCard
-│       │   └── organisms/ # AlbumGrid, TrackList, PlayerBar, Navbar, TagFilter, etc.
-│       ├── layouts/       # MainLayout (Navbar + router-view + PlayerBar + Footer)
-│       ├── views/         # Home, AlbumDetail, Labels, LabelDetail, TagBrowse
-│       ├── router/        # Vue Router config (6 routes)
-│       ├── stores/        # Pinia store: player.js only (no auth store yet)
-│       └── styles/        # tokens.css (vars), reset.css, utilities.css
-├── backend/               # Spring Boot (scaffolded, minimal code)
-│   └── src/main/java/com/indietracks/backend/
-│       └── BackendApplication.java  # Entry point only
-├── crawler/               # Scrapy project → see crawler/CLAUDE.md
+├── backend/               # Spring Boot (scaffolded)
+├── crawler/               # Scrapy project → crawler/CLAUDE.md
+├── scripts/               # 运维脚本 → scripts/CLAUDE.md
+│   └── windows/
+│       ├── _common.py
+│       ├── setup-database.py
+│       ├── setup-minio.py
+│       └── run-crawlers.py
 └── database/
-    ├── create_database.sql        # Full schema (14 tables, indexes)
-    └── init.sql                   # TRUNCATE + reset sequences
+    ├── create_database.sql        # 14 tables + migrations
+    └── init.sql                   # TRUNCATE + reset
 ```
 
 ## Key Conventions
 
 - **snake_case** everywhere: DB columns = backend JSON keys = frontend mock data fields
 - **Dark flat theme**: bg `#0a0a0a`, accent `#ff6b6b`, CSS custom properties in tokens.css
-- **Component layers**: molecules → organisms → layouts → views (no atoms layer)
-- **Player**: Pinia store with localStorage persistence, plays only preview tracks, Spotify-style bottom bar
-- **Mock phase**: All frontend data comes from `api/mock.js`, no real backend calls yet
+- **Component layers**: molecules → organisms → layouts → views
+- **Player**: Pinia store with localStorage persistence, Spotify-style bottom bar
 
 ## Page Status
 
