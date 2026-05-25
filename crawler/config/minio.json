@@ -1,7 +1,7 @@
 {
   "endpoint": "http://localhost:9000",
-  "access_key": "",
-  "secret_key": "",
+  "access_key": "indietracks_app",
+  "secret_key": "indietracks_app_2026",
   "bucket": "indietracks",
   "prefixes": {
     "audio_preview": "audio/preview/",

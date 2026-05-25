@@ -18,7 +18,8 @@ import psycopg2
 from indietracks_spider.items import (
     AlbumItem, WorkFileItem, CircleItem, AlbumCircleItem,
     TagItem, AlbumTagItem, UserItem, UserCircleItem,
-    CommentItem, OwnedAlbumItem,
+    CommentItem, OwnedAlbumItem, FavoriteItem,
+    CircleFollowItem, UserFollowItem,
 )
 from indietracks_spider.utils.config_loader import get_database_config
 
@@ -85,6 +86,12 @@ class PostgresPipeline:
                 self._upsert_comment(item)
             elif isinstance(item, OwnedAlbumItem):
                 self._upsert_owned(item)
+            elif isinstance(item, FavoriteItem):
+                self._upsert_favorite(item)
+            elif isinstance(item, CircleFollowItem):
+                self._upsert_circle_follow(item)
+            elif isinstance(item, UserFollowItem):
+                self._upsert_user_follow(item)
 
             self.conn.commit()
         except Exception:
@@ -141,6 +148,27 @@ class PostgresPipeline:
         elif isinstance(item, WorkFileItem):
             if not item.get("album_id") and item.get("_dizzylab_id"):
                 item["album_id"] = self._album_id_cache.get(item["_dizzylab_id"])
+
+        # FavoriteItem: _dizzylab_user_id → user_id, _dizzylab_id → album_id
+        elif isinstance(item, FavoriteItem):
+            if not item.get("user_id") and item.get("_dizzylab_user_id"):
+                item["user_id"] = self._user_id_cache.get(item["_dizzylab_user_id"])
+            if not item.get("album_id") and item.get("_dizzylab_id"):
+                item["album_id"] = self._album_id_cache.get(item["_dizzylab_id"])
+
+        # CircleFollowItem: _dizzylab_user_id → user_id, _dizzylab_labelid → circle_id
+        elif isinstance(item, CircleFollowItem):
+            if not item.get("user_id") and item.get("_dizzylab_user_id"):
+                item["user_id"] = self._user_id_cache.get(item["_dizzylab_user_id"])
+            if not item.get("circle_id") and item.get("_dizzylab_labelid"):
+                item["circle_id"] = self._circle_id_cache.get(item["_dizzylab_labelid"])
+
+        # UserFollowItem: _dizzylab_user_id → user_id, _dizzylab_followed_user_id → followed_user_id
+        elif isinstance(item, UserFollowItem):
+            if not item.get("user_id") and item.get("_dizzylab_user_id"):
+                item["user_id"] = self._user_id_cache.get(item["_dizzylab_user_id"])
+            if not item.get("followed_user_id") and item.get("_dizzylab_followed_user_id"):
+                item["followed_user_id"] = self._user_id_cache.get(item["_dizzylab_followed_user_id"])
 
     # ── 各表 upsert ────────────────────────────────────
 
@@ -291,4 +319,25 @@ class PostgresPipeline:
             """INSERT INTO owned_albums (user_id, album_id) VALUES (%s, %s)
                ON CONFLICT DO NOTHING""",
             (item["user_id"], item["album_id"]),
+        )
+
+    def _upsert_favorite(self, item: FavoriteItem):
+        self.cursor.execute(
+            """INSERT INTO favorites (user_id, album_id) VALUES (%s, %s)
+               ON CONFLICT DO NOTHING""",
+            (item["user_id"], item["album_id"]),
+        )
+
+    def _upsert_circle_follow(self, item: CircleFollowItem):
+        self.cursor.execute(
+            """INSERT INTO circle_follows (user_id, circle_id) VALUES (%s, %s)
+               ON CONFLICT DO NOTHING""",
+            (item["user_id"], item["circle_id"]),
+        )
+
+    def _upsert_user_follow(self, item: UserFollowItem):
+        self.cursor.execute(
+            """INSERT INTO user_follows (user_id, followed_user_id) VALUES (%s, %s)
+               ON CONFLICT DO NOTHING""",
+            (item["user_id"], item["followed_user_id"]),
         )

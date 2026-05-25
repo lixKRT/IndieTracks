@@ -23,6 +23,7 @@ class WorkFileItem(scrapy.Item):
     track_length = scrapy.Field()
     file_size = scrapy.Field()
     sort_order = scrapy.Field()
+    _dizzylab_id = scrapy.Field()     # 临时关联
 
 
 class CircleItem(scrapy.Item):
@@ -37,6 +38,8 @@ class CircleItem(scrapy.Item):
 class AlbumCircleItem(scrapy.Item):
     album_id = scrapy.Field()
     circle_id = scrapy.Field()
+    _dizzylab_id = scrapy.Field()         # 临时关联
+    _dizzylab_labelid = scrapy.Field()    # 临时关联
 
 
 class TagItem(scrapy.Item):
@@ -47,6 +50,8 @@ class TagItem(scrapy.Item):
 class AlbumTagItem(scrapy.Item):
     album_id = scrapy.Field()
     tag_id = scrapy.Field()
+    _dizzylab_id = scrapy.Field()         # 临时关联
+    _tag_name = scrapy.Field()            # 临时关联
 
 
 class UserItem(scrapy.Item):
@@ -60,6 +65,8 @@ class UserItem(scrapy.Item):
 class UserCircleItem(scrapy.Item):
     user_id = scrapy.Field()
     circle_id = scrapy.Field()
+    _dizzylab_user_id = scrapy.Field()    # 临时关联
+    _dizzylab_labelid = scrapy.Field()    # 临时关联
 
 
 class CommentItem(scrapy.Item):
@@ -68,27 +75,37 @@ class CommentItem(scrapy.Item):
     album_id = scrapy.Field()
     content = scrapy.Field()
     created_at = scrapy.Field()
+    _dizzylab_user_id = scrapy.Field()    # 临时关联
+    _dizzylab_id = scrapy.Field()         # 临时关联
 
 
 class OwnedAlbumItem(scrapy.Item):
     user_id = scrapy.Field()
     album_id = scrapy.Field()
     created_at = scrapy.Field()
+    _dizzylab_user_id = scrapy.Field()    # 临时关联
+    _dizzylab_id = scrapy.Field()         # 临时关联
 
 
 class FavoriteItem(scrapy.Item):
     user_id = scrapy.Field()
     album_id = scrapy.Field()
     created_at = scrapy.Field()
+    _dizzylab_user_id = scrapy.Field()    # 临时关联
+    _dizzylab_id = scrapy.Field()         # 临时关联
 
 
 class CircleFollowItem(scrapy.Item):
     user_id = scrapy.Field()
     circle_id = scrapy.Field()
     created_at = scrapy.Field()
+    _dizzylab_user_id = scrapy.Field()    # 临时关联
+    _dizzylab_labelid = scrapy.Field()    # 临时关联
 
 
 class UserFollowItem(scrapy.Item):
     user_id = scrapy.Field()
     followed_user_id = scrapy.Field()
     created_at = scrapy.Field()
+    _dizzylab_user_id = scrapy.Field()            # 临时关联
+    _dizzylab_followed_user_id = scrapy.Field()   # 临时关联

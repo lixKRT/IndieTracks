@@ -36,6 +36,7 @@ from indietracks_spider.utils.config_loader import (
     get_database_config,
     get_spider_config,
 )
+from indietracks_spider.utils.minio import download_and_upload
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,8 @@ class AlbumBulkSpider(scrapy.Spider):
         delay_cfg = get_delay_config()
         self._between_min = delay_cfg.get("between_albums_min", 60)
         self._between_random = delay_cfg.get("between_albums_random", 60)
+        self._track_min = delay_cfg.get("between_tracks_min", 1)
+        self._track_random_max = delay_cfg.get("between_tracks_random_max", 5)
 
         self._processed = 0
         self._skipped = 0
@@ -107,13 +110,15 @@ class AlbumBulkSpider(scrapy.Spider):
         self._check_conn.autocommit = True
         self._check_cur = self._check_conn.cursor()
 
-    def _album_exists(self, dizzylab_id: str) -> bool:
+    def _album_is_complete(self, dizzylab_id: str) -> bool:
+        """专辑是否已存在且数据完整（info_title 非空）。"""
         self._ensure_db_check()
         self._check_cur.execute(
-            "SELECT EXISTS(SELECT 1 FROM albums WHERE dizzylab_id = %s)",
+            "SELECT info_title FROM albums WHERE dizzylab_id = %s",
             (dizzylab_id,),
         )
-        return self._check_cur.fetchone()[0]
+        row = self._check_cur.fetchone()
+        return row is not None and row[0] is not None
 
     def closed(self, reason):
         if self._check_cur:
@@ -152,18 +157,19 @@ class AlbumBulkSpider(scrapy.Spider):
         self.logger.info("翻页 l=%d，获取到 %d 张专辑", page_start, len(discs))
 
         for disc in discs:
-            # 达到限额则停止
+            # 达到限额则停止（break 保证已 yield 的请求能处理完）
             if self._max_albums > 0 and self._processed >= self._max_albums:
-                raise CloseSpider(f"已达上限 {self._max_albums} 张")
+                self.logger.info("已达上限 %d 张，停止翻页", self._max_albums)
+                return
 
             slug = disc["id"]
-            exists = self._album_exists(slug)
+            complete = self._album_is_complete(slug)
 
-            # incremental 模式：跳过已存在
-            if self._mode == "incremental" and exists:
+            # incremental 模式：仅跳过数据完整的专辑
+            if self._mode == "incremental" and complete:
                 self._skipped += 1
                 self.logger.info(
-                    "[%s] 跳过 | 已存在 | 累计跳过: %d",
+                    "[%s] 跳过 | 数据完整 | 累计跳过: %d",
                     slug,
                     self._skipped,
                 )
@@ -190,12 +196,6 @@ class AlbumBulkSpider(scrapy.Spider):
                 meta={"disc": disc},
                 dont_filter=True,
             )
-
-            # 专辑间延迟（遵守 delay.json）
-            if self._max_albums == 0 or self._processed < self._max_albums:
-                wait = self._between_min + random.randint(0, self._between_random)
-                self.logger.info("专辑间延迟 %ds（min=%d + rand(%d)）", wait, self._between_min, self._between_random)
-                time.sleep(wait)
 
         # 翻到下一页（还有限额或无限额）
         if self._max_albums == 0 or self._processed < self._max_albums:
@@ -238,23 +238,34 @@ class AlbumBulkSpider(scrapy.Spider):
 
         yield album
 
-        # ── WorkFile ──
+        # ── WorkFile (下载 + 上传 MinIO) ──
         track_lis = response.xpath("//ul[contains(@class,'playlist--list')]/li")
         for li in track_lis:
             data_id = li.xpath("./@data-id").get()
             data_audio = li.xpath("./@data-audio").get()
             title_text = li.xpath(".//span[@class='t-title']/text()").get()
 
+            sort_order = int(data_id) + 1 if data_id is not None else 0
+
+            obj_key = None
+            file_size = 0
+            if data_audio:
+                result = download_and_upload(data_audio, slug, sort_order)
+                if result:
+                    obj_key, file_size = result
+                else:
+                    self.logger.warning(
+                        "  [跳过] 曲目 %d 音频下载失败: %s", sort_order, title_text or "?"
+                    )
+                    continue  # 跳过该曲目
+
             wf = WorkFileItem()
             wf["album_id"] = None
             wf["_dizzylab_id"] = slug
             wf["file_type"] = "preview"
-            wf["file_size"] = 0
-
-            if data_id is not None:
-                wf["sort_order"] = int(data_id) + 1
-            if data_audio:
-                wf["object_key"] = data_audio
+            wf["file_size"] = file_size
+            wf["sort_order"] = sort_order
+            wf["object_key"] = obj_key or data_audio
 
             if title_text:
                 m = TRACK_RE.match(title_text.strip())
@@ -266,6 +277,11 @@ class AlbumBulkSpider(scrapy.Spider):
                     wf["track_length"] = ""
 
             yield wf
+
+            # 曲目间延迟
+            delay = self._track_min + random.randint(0, self._track_random_max)
+            if delay > 0:
+                time.sleep(delay)
 
         # ── Tag + AlbumTag ──
         tag_as = response.xpath("//h4[@class='text-left']/a")
@@ -327,6 +343,12 @@ class AlbumBulkSpider(scrapy.Spider):
                     "_labelname": labelname,
                 },
             )
+
+        # 专辑间延迟（在子请求 yield 后，下一张 detail 页触发前）
+        if self._max_albums == 0 or self._processed < self._max_albums:
+            wait = self._between_min + random.randint(0, self._between_random)
+            self.logger.info("专辑间延迟 %ds（min=%d + rand(%d)）", wait, self._between_min, self._between_random)
+            time.sleep(wait)
 
     # ── 3. 已购买用户 ────────────────────────────────
 

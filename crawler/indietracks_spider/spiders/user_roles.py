@@ -119,11 +119,12 @@ class UserRolesSpider(scrapy.Spider):
     # ── 解析 /setup ─────────────────────────────────
 
     def parse_setup(self, response):
-        # STAFF 用户
+        # STAFF 用户（仅取 STAFF h2 和 PRO h2 之间的链接）
         staff_heading = response.xpath("//h2[contains(., 'STAFF')]")
         if staff_heading:
             staff_links = staff_heading[0].xpath(
                 "./following-sibling::a[contains(@href, '/u/')]"
+                "[not(preceding-sibling::h2[contains(., 'PRO')])]"
             )
             for a in staff_links:
                 href = a.xpath("./@href").get("")

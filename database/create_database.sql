@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
     avatar_url      VARCHAR(500),
     user_role       VARCHAR(10) DEFAULT 'normal'
                     CHECK (user_role IN ('normal', 'pro', 'staff')),
-    created_at      TIMESTAMP DEFAULT NOW()
+    created_at          TIMESTAMP DEFAULT NOW(),
+    userpage_crawled_at TIMESTAMP
 );
 
 -- ── 社团表 ──────────────────────────────────────────────
@@ -87,6 +88,8 @@ CREATE TABLE IF NOT EXISTS comments (
     created_at  TIMESTAMP DEFAULT NOW()
 );
 
+SELECT current_database();
+
 -- ── 收藏表 ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS favorites (
     user_id    INT REFERENCES users(user_id) ON DELETE CASCADE,
@@ -137,3 +140,14 @@ CREATE INDEX IF NOT EXISTS idx_circle_follows_user_id     ON circle_follows(user
 CREATE INDEX IF NOT EXISTS idx_circle_follows_circle_id   ON circle_follows(circle_id);
 CREATE INDEX IF NOT EXISTS idx_owned_albums_user_id       ON owned_albums(user_id);
 CREATE INDEX IF NOT EXISTS idx_owned_albums_album_id      ON owned_albums(album_id);
+
+-- ── 迁移：user_pages 爬虫追踪字段（安全幂等） ──────────
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'users' AND column_name = 'userpage_crawled_at'
+    ) THEN
+        ALTER TABLE users ADD COLUMN userpage_crawled_at TIMESTAMP;
+    END IF;
+END $$;
