@@ -101,6 +101,19 @@ class PostgresPipeline:
 
     # ── 临时关联字段解析 ─────────────────────────────
 
+    def _lookup_circle(self, labelid: int) -> int | None:
+        """缓存未命中时从 DB 查 circle_id，查到则回填缓存。"""
+        if labelid in self._circle_id_cache:
+            return self._circle_id_cache[labelid]
+        self.cursor.execute(
+            "SELECT circle_id FROM circles WHERE dizzylab_labelid = %s", (labelid,)
+        )
+        row = self.cursor.fetchone()
+        if row:
+            self._circle_id_cache[labelid] = row[0]
+            return row[0]
+        return None
+
     def _resolve_refs(self, item):
         """将 Spider 中暂存的 _dizzylab_id / _tag_name 等临时字段
         替换为实际的数据库主键。"""
@@ -116,7 +129,7 @@ class PostgresPipeline:
             if not item.get("album_id") and item.get("_dizzylab_id"):
                 item["album_id"] = self._album_id_cache.get(item["_dizzylab_id"])
             if not item.get("circle_id") and item.get("_dizzylab_labelid"):
-                item["circle_id"] = self._circle_id_cache.get(item["_dizzylab_labelid"])
+                item["circle_id"] = self._lookup_circle(item["_dizzylab_labelid"])
 
         # OwnedAlbumItem: _dizzylab_user_id → user_id, _dizzylab_id → album_id
         elif isinstance(item, OwnedAlbumItem):
@@ -137,7 +150,7 @@ class PostgresPipeline:
             if not item.get("user_id") and item.get("_dizzylab_user_id"):
                 item["user_id"] = self._user_id_cache.get(item["_dizzylab_user_id"])
             if not item.get("circle_id") and item.get("_dizzylab_labelid"):
-                item["circle_id"] = self._circle_id_cache.get(item["_dizzylab_labelid"])
+                item["circle_id"] = self._lookup_circle(item["_dizzylab_labelid"])
 
         # WorkFileItem: 需要 album_id（从 _dizzylab_id 或其他方式）
         # Spider 中 WorkFileItem 紧跟 AlbumItem yield，但 album_id 还不存在
@@ -161,7 +174,7 @@ class PostgresPipeline:
             if not item.get("user_id") and item.get("_dizzylab_user_id"):
                 item["user_id"] = self._user_id_cache.get(item["_dizzylab_user_id"])
             if not item.get("circle_id") and item.get("_dizzylab_labelid"):
-                item["circle_id"] = self._circle_id_cache.get(item["_dizzylab_labelid"])
+                item["circle_id"] = self._lookup_circle(item["_dizzylab_labelid"])
 
         # UserFollowItem: _dizzylab_user_id → user_id, _dizzylab_followed_user_id → followed_user_id
         elif isinstance(item, UserFollowItem):
@@ -200,6 +213,7 @@ class PostgresPipeline:
                VALUES (%s, %s, %s, %s)
                ON CONFLICT (dizzylab_labelid) DO UPDATE
                  SET name=EXCLUDED.name,
+                     description=COALESCE(EXCLUDED.description, circles.description),
                      logo_url=COALESCE(EXCLUDED.logo_url, circles.logo_url)
                RETURNING circle_id""",
             (lid, item.get("name"), item.get("description"), item.get("logo_url")),
@@ -221,7 +235,11 @@ class PostgresPipeline:
                VALUES (%s, %s, %s, %s)
                ON CONFLICT (dizzylab_user_id) DO UPDATE
                  SET username=EXCLUDED.username,
-                     avatar_url=COALESCE(EXCLUDED.avatar_url, users.avatar_url)
+                     avatar_url=COALESCE(EXCLUDED.avatar_url, users.avatar_url),
+                     user_role = CASE
+                       WHEN users.user_role = 'staff' THEN 'staff'
+                       ELSE EXCLUDED.user_role
+                     END
                RETURNING user_id""",
             (uid, item.get("username"), item.get("avatar_url"), item.get("user_role", "normal")),
         )
@@ -240,8 +258,11 @@ class PostgresPipeline:
                VALUES (%s, %s, %s, %s, %s, %s, %s)
                ON CONFLICT (dizzylab_id) DO UPDATE
                  SET title=EXCLUDED.title,
+                     info_title=COALESCE(EXCLUDED.info_title, albums.info_title),
+                     info_content=COALESCE(EXCLUDED.info_content, albums.info_content),
                      price=EXCLUDED.price,
-                     cover_url=COALESCE(EXCLUDED.cover_url, albums.cover_url)
+                     cover_url=COALESCE(EXCLUDED.cover_url, albums.cover_url),
+                     publish_date=COALESCE(EXCLUDED.publish_date, albums.publish_date)
                RETURNING album_id""",
             (
                 did,

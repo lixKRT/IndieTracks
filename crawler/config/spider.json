@@ -1,5 +1,5 @@
 {
-  "mode": "full",
-  "max_albums": 50,
-  "max_users": 20
+  "mode": "incremental",
+  "max_albums": 1,
+  "max_users": 1
 }

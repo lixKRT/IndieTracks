@@ -1,7 +1,14 @@
 -- ============================================================
--- IndieTracks 数据库建表脚本
--- 用法：psql -U postgres -d indietracks -f create_database.sql
+-- IndieTracks 数据库建表脚本（含建库 + 建表）
+-- 用法：psql -U postgres -d postgres -f create_database.sql
 -- ============================================================
+
+-- 创建数据库（幂等 —— 已存在则跳过）
+SELECT 'CREATE DATABASE indietracks'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'indietracks')\gexec
+
+-- 切换到 indietracks 数据库
+\c indietracks
 
 -- ── 用户表 ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
@@ -24,7 +31,8 @@ CREATE TABLE IF NOT EXISTS circles (
     name              VARCHAR(100) NOT NULL,
     description       TEXT,
     logo_url          VARCHAR(500),
-    owner_user_id     INT REFERENCES users(user_id) ON DELETE SET NULL
+    owner_user_id     INT REFERENCES users(user_id) ON DELETE SET NULL,
+    member_count      INTEGER DEFAULT 0
 );
 
 -- ── 用户-社团关联表 ─────────────────────────────────────
@@ -88,8 +96,6 @@ CREATE TABLE IF NOT EXISTS comments (
     created_at  TIMESTAMP DEFAULT NOW()
 );
 
-SELECT current_database();
-
 -- ── 收藏表 ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS favorites (
     user_id    INT REFERENCES users(user_id) ON DELETE CASCADE,
@@ -149,5 +155,16 @@ BEGIN
         WHERE table_name = 'users' AND column_name = 'userpage_crawled_at'
     ) THEN
         ALTER TABLE users ADD COLUMN userpage_crawled_at TIMESTAMP;
+    END IF;
+END $$;
+
+-- ── 迁移：circle_members 成员计数追踪字段 ────────────
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'circles' AND column_name = 'member_count'
+    ) THEN
+        ALTER TABLE circles ADD COLUMN member_count INTEGER DEFAULT 0;
     END IF;
 END $$;

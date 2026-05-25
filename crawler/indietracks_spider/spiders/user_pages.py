@@ -14,7 +14,6 @@ import re
 from datetime import datetime, timedelta, timezone
 from urllib.parse import unquote
 
-import psycopg2
 import scrapy
 
 from indietracks_spider.items import (
@@ -23,14 +22,14 @@ from indietracks_spider.items import (
     CircleFollowItem,
 )
 from indietracks_spider.utils.config_loader import (
-    get_database_config,
     get_delay_config,
     get_spider_config,
 )
+from indietracks_spider.utils.constants import BASE
+from indietracks_spider.utils.db import get_connection, close_connection
+from indietracks_spider.utils.parsing import check_response_ok
 
 logger = logging.getLogger(__name__)
-
-BASE = "https://www.dizzylab.net"
 
 # 分页参数：music 用 ?page=，likes/following 用 ?dp=
 PAGE_PARAM = {"music": "page", "likes": "dp", "following": "dp"}
@@ -79,19 +78,7 @@ class UserPagesSpider(scrapy.Spider):
     def _ensure_db(self):
         if self._db_cur is not None:
             return
-        db = get_database_config()
-        if not db.get("user"):
-            raise RuntimeError("数据库未配置，请编辑 crawler/config/database.json")
-        self._db_conn = psycopg2.connect(
-            host=db["host"],
-            port=db["port"],
-            database=db["database"],
-            user=db["user"],
-            password=db["password"],
-            options="-c client_encoding=UTF8",
-        )
-        self._db_conn.autocommit = True
-        self._db_cur = self._db_conn.cursor()
+        self._db_conn, self._db_cur = get_connection()
 
     def _get_users(self):
         """从 DB 读取待处理用户列表。"""
@@ -175,10 +162,7 @@ class UserPagesSpider(scrapy.Spider):
         for uid in self._processed_uids:
             self._mark_user_crawled(uid)
 
-        if self._db_cur:
-            self._db_cur.close()
-        if self._db_conn:
-            self._db_conn.close()
+        close_connection(self._db_conn, self._db_cur)
         self.logger.info(
             "user_pages 结束 | processed=%d | skipped=%d | reason=%s",
             self._processed,
@@ -262,6 +246,8 @@ class UserPagesSpider(scrapy.Spider):
     # ── Music：已购专辑 ───────────────────────────────
 
     def parse_music(self, response):
+        if not check_response_ok(response):
+            return
         dizzylab_uid = response.meta["_dizzylab_user_id"]
         current_page = response.meta["_page"]
         user_db_id = self._resolve_user_db_id(dizzylab_uid)
@@ -292,6 +278,8 @@ class UserPagesSpider(scrapy.Spider):
     # ── Likes：收藏 ───────────────────────────────────
 
     def parse_likes(self, response):
+        if not check_response_ok(response):
+            return
         dizzylab_uid = response.meta["_dizzylab_user_id"]
         current_dp = response.meta["_dp"]
         user_db_id = self._resolve_user_db_id(dizzylab_uid)
@@ -321,6 +309,8 @@ class UserPagesSpider(scrapy.Spider):
     # ── Following：关注社团 ────────────────────────────
 
     def parse_following(self, response):
+        if not check_response_ok(response):
+            return
         dizzylab_uid = response.meta["_dizzylab_user_id"]
         current_dp = response.meta["_dp"]
         user_db_id = self._resolve_user_db_id(dizzylab_uid)

@@ -9,26 +9,16 @@ user_roles — 用户角色爬虫
 """
 
 import logging
-import re
 
-import psycopg2
 import scrapy
 from scrapy.exceptions import CloseSpider
 
-from indietracks_spider.utils.config_loader import (
-    get_database_config,
-    get_delay_config,
-    get_spider_config,
-)
+from indietracks_spider.utils.config_loader import get_spider_config
+from indietracks_spider.utils.constants import BASE
+from indietracks_spider.utils.db import get_connection, close_connection
+from indietracks_spider.utils.parsing import extract_user_id, check_response_ok
 
 logger = logging.getLogger(__name__)
-
-BASE = "https://www.dizzylab.net"
-
-
-def extract_user_id(url: str) -> int | None:
-    m = re.search(r"/u/(\d+)|/albums/u/(\d+)", url)
-    return int(m.group(1) or m.group(2)) if m else None
 
 
 class UserRolesSpider(scrapy.Spider):
@@ -55,19 +45,7 @@ class UserRolesSpider(scrapy.Spider):
     def _ensure_db(self):
         if self._db_cur is not None:
             return
-        db = get_database_config()
-        if not db.get("user"):
-            raise RuntimeError("数据库未配置，请编辑 crawler/config/database.json")
-        self._db_conn = psycopg2.connect(
-            host=db["host"],
-            port=db["port"],
-            database=db["database"],
-            user=db["user"],
-            password=db["password"],
-            options="-c client_encoding=UTF8",
-        )
-        self._db_conn.autocommit = True
-        self._db_cur = self._db_conn.cursor()
+        self._db_conn, self._db_cur = get_connection()
 
     def _update_role(self, dizzylab_user_id: int, role: str) -> bool:
         """更新用户角色。incremental 模式跳过已有 role 的用户。"""
@@ -83,7 +61,6 @@ class UserRolesSpider(scrapy.Spider):
                 self._skipped_count += 1
                 return False
 
-        # 先确保用户存在（如果不存在则插入占位行）
         self._db_cur.execute(
             """INSERT INTO users (dizzylab_user_id, username, user_role)
                VALUES (%s, %s, %s)
@@ -94,10 +71,7 @@ class UserRolesSpider(scrapy.Spider):
         return True
 
     def closed(self, reason):
-        if self._db_cur:
-            self._db_cur.close()
-        if self._db_conn:
-            self._db_conn.close()
+        close_connection(self._db_conn, self._db_cur)
         self.logger.info(
             "user_roles 结束 | staff=%d | pro=%d | skipped=%d | mode=%s | reason=%s",
             self._staff_count,
@@ -119,6 +93,9 @@ class UserRolesSpider(scrapy.Spider):
     # ── 解析 /setup ─────────────────────────────────
 
     def parse_setup(self, response):
+        if not check_response_ok(response):
+            self.logger.error("setup 页面访问失败，无法获取角色数据")
+            raise CloseSpider("setup 页面异常")
         # STAFF 用户（仅取 STAFF h2 和 PRO h2 之间的链接）
         staff_heading = response.xpath("//h2[contains(., 'STAFF')]")
         if staff_heading:

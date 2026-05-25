@@ -2,35 +2,29 @@
 circle_members — 社团成员爬虫
 
 遍历 circles 表所有社团，逐社团爬取成员列表。遵守 spider.json 的 mode 控制。
+社团间隔使用 Twisted reactor.callLater，不阻塞引擎。
 
 用法：
     scrapy crawl circle_members
 """
 
 import logging
-import random
-import re
-import time
+from urllib.parse import quote
 
-import psycopg2
 import scrapy
-from scrapy.exceptions import CloseSpider
+from scrapy.exceptions import DontCloseSpider
+from scrapy import signals
 
 from indietracks_spider.items import UserItem, UserCircleItem
 from indietracks_spider.utils.config_loader import (
-    get_database_config,
     get_delay_config,
     get_spider_config,
 )
+from indietracks_spider.utils.constants import BASE
+from indietracks_spider.utils.db import get_connection, close_connection
+from indietracks_spider.utils.parsing import extract_user_id, check_response_ok
 
 logger = logging.getLogger(__name__)
-
-BASE = "https://www.dizzylab.net"
-
-
-def extract_user_id(url: str) -> int | None:
-    m = re.search(r"/u/(\d+)|/albums/u/(\d+)", url)
-    return int(m.group(1) or m.group(2)) if m else None
 
 
 class CircleMembersSpider(scrapy.Spider):
@@ -54,42 +48,50 @@ class CircleMembersSpider(scrapy.Spider):
         self._db_conn = None
         self._db_cur = None
 
+        # 队列驱动
+        self._pending_circles: list[tuple] = []
+
+        self._delay_pending = False
+
         self.logger.info(
             "circle_members 启动 | mode=%s | 社团间延迟=%ds",
             self._mode,
             self._circle_delay,
         )
 
+    @classmethod
+    def from_crawler(cls, crawler, *args, **kwargs):
+        spider = super().from_crawler(crawler, *args, **kwargs)
+        crawler.signals.connect(spider._spider_idle, signal=signals.spider_idle)
+        return spider
+
+    def _spider_idle(self):
+        if self._delay_pending or self._pending_circles:
+            raise DontCloseSpider
+
     def _ensure_db(self):
         if self._db_cur is not None:
             return
-        db = get_database_config()
-        if not db.get("user"):
-            raise RuntimeError("数据库未配置，请编辑 crawler/config/database.json")
-        self._db_conn = psycopg2.connect(
-            host=db["host"],
-            port=db["port"],
-            database=db["database"],
-            user=db["user"],
-            password=db["password"],
-            options="-c client_encoding=UTF8",
-        )
-        self._db_conn.autocommit = True
-        self._db_cur = self._db_conn.cursor()
+        self._db_conn, self._db_cur = get_connection()
 
-    def _circle_has_members(self, circle_id: int) -> bool:
+    def _circle_members_up_to_date(self, circle_id: int) -> bool:
         self._ensure_db()
         self._db_cur.execute(
-            "SELECT EXISTS(SELECT 1 FROM user_circles WHERE circle_id = %s)",
+            """SELECT c.member_count, COUNT(uc.user_id)
+               FROM circles c
+               LEFT JOIN user_circles uc ON uc.circle_id = c.circle_id
+               WHERE c.circle_id = %s
+               GROUP BY c.circle_id""",
             (circle_id,),
         )
-        return self._db_cur.fetchone()[0]
+        row = self._db_cur.fetchone()
+        if row is None:
+            return False
+        stored_count, actual_count = row
+        return stored_count is not None and stored_count == actual_count
 
     def closed(self, reason):
-        if self._db_cur:
-            self._db_cur.close()
-        if self._db_conn:
-            self._db_conn.close()
+        close_connection(self._db_conn, self._db_cur)
         self.logger.info(
             "circle_members 结束 | processed=%d | skipped=%d | reason=%s",
             self._processed,
@@ -97,7 +99,43 @@ class CircleMembersSpider(scrapy.Spider):
             reason,
         )
 
-    # ── 入口：从数据库读取社团列表 ──────────────────
+    # ── 调度 ─────────────────────────────────────────
+
+    def _schedule_next(self):
+        """取下一个待处理社团，注入引擎。"""
+        while self._pending_circles:
+            circle_id, dizzylab_labelid, name = self._pending_circles.pop(0)
+
+            if self._mode == "incremental" and self._circle_members_up_to_date(circle_id):
+                self._skipped += 1
+                self.logger.info("[跳过: %d] %s (circle_id=%d) 成员数无变化", self._skipped, name, circle_id)
+                continue
+
+            self._processed += 1
+            self.logger.info(
+                "[%d] %s (circle_id=%d) | mode=%s | 跳过: %d",
+                self._processed,
+                name,
+                circle_id,
+                self._mode,
+                self._skipped,
+            )
+
+            self.crawler.engine.crawl(
+                scrapy.Request(
+                    f"{BASE}/l/{quote(name)}/",
+                    callback=self.parse_circle_detail,
+                    meta={
+                        "_circle_id": circle_id,
+                        "_dizzylab_labelid": dizzylab_labelid,
+                        "_circle_name": name,
+                    },
+                    dont_filter=True,
+                ),
+            )
+            return
+
+    # ── 入口 ─────────────────────────────────────────
 
     def start_requests(self):
         self._ensure_db()
@@ -111,40 +149,20 @@ class CircleMembersSpider(scrapy.Spider):
             return
 
         self.logger.info("从数据库读取到 %d 个社团", len(circles))
-
-        for circle_id, dizzylab_labelid, name in circles:
-            # incremental 模式：跳转已有成员的社团
-            if self._mode == "incremental" and self._circle_has_members(circle_id):
-                self._skipped += 1
-                self.logger.info("[跳过: %d] %s (circle_id=%d) 已有成员", self._skipped, name, circle_id)
-                continue
-
-            self._processed += 1
-            self.logger.info(
-                "[%d] %s (circle_id=%d) | mode=%s | 跳过: %d",
-                self._processed,
-                name,
-                circle_id,
-                self._mode,
-                self._skipped,
-            )
-
-            # URL 编码社团名
-            from urllib.parse import quote
-            circle_url = f"{BASE}/l/{quote(name)}/"
-            yield scrapy.Request(
-                circle_url,
-                callback=self.parse_circle_detail,
-                meta={
-                    "_dizzylab_labelid": dizzylab_labelid,
-                    "_circle_name": name,
-                },
-                dont_filter=True,
-            )
+        self._pending_circles = list(circles)
+        self._schedule_next()
+        yield from ()  # 请求由 engine.crawl() 注入，start() 需要可迭代对象
 
     # ── 解析社团详情页 ──────────────────────────────
 
     def parse_circle_detail(self, response):
+        if not check_response_ok(response):
+            self.logger.warning("社团详情页异常，跳过")
+            self._delay_pending = True
+            from twisted.internet import reactor
+            reactor.callLater(self._circle_delay, self._on_delay_done)
+            return
+        circle_id = response.meta["_circle_id"]
         labelid = response.meta["_dizzylab_labelid"]
         name = response.meta["_circle_name"]
 
@@ -182,5 +200,17 @@ class CircleMembersSpider(scrapy.Spider):
 
         self.logger.info("  %s: 找到 %d 名成员", name, found)
 
-        # 社团间延迟（遵守 delay.json download_delay）
-        time.sleep(self._circle_delay)
+        self._ensure_db()
+        self._db_cur.execute(
+            "UPDATE circles SET member_count = %s WHERE circle_id = %s",
+            (found, circle_id),
+        )
+
+        # 社团间延迟（不阻塞 reactor）
+        self._delay_pending = True
+        from twisted.internet import reactor
+        reactor.callLater(self._circle_delay, self._on_delay_done)
+
+    def _on_delay_done(self):
+        self._delay_pending = False
+        self._schedule_next()

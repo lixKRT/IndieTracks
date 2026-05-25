@@ -1,117 +1,73 @@
-# ER图
+# IndieTracks 数据库 ER 图与 DDL
 
-```mermaid
-erDiagram
-    User ||--o{ Comment : writes
-    User ||--o{ Favorite : adds_to
-    User }o--o{ Circle : belongs_to
-    User ||--o{ UserFollow : follows_user
-    User ||--o{ CircleFollow : follows_circle
-    User ||--o{ OwnedAlbum : owns
+> 更新：2026-05-25
+> PostgreSQL 18，14 张表
 
-    Album ||--o{ WorkFile : contains
-    Album ||--o{ Comment : has
-    Album ||--o{ Favorite : has
-    Album }o--o{ Tag : has
-    Album }o--o{ Circle : created_by
+---
 
-    Circle ||--o{ CircleFollow : followed_by_user
+## 核心实体（4 张）
 
-    User {
-        int user_id PK
-        int dizzylab_user_id UK
-        varchar username
-        varchar email
-        varchar password_hash
-        varchar avatar_url
-        varchar user_role "normal / pro / staff"
-        timestamp created_at
-    }
+| 表 | 主键 | 去重键 | 说明 |
+|:---|:---|:---|:---|
+| `users` | `user_id` SERIAL | `dizzylab_user_id` UNIQUE | role: normal/pro/staff, `userpage_crawled_at` |
+| `circles` | `circle_id` SERIAL | `dizzylab_labelid` UNIQUE | `member_count` 记录上次爬取成员数 |
+| `albums` | `album_id` SERIAL | `dizzylab_id` UNIQUE | `info_title`/`info_content` 替代 description |
+| `tags` | `tag_id` SERIAL | `name` UNIQUE | 标签（已去 `#`） |
 
-    Circle {
-        int circle_id PK
-        int dizzylab_labelid UK
-        varchar name
-        text description
-        varchar logo_url
-        int owner_user_id FK
-    }
+## 关联表（6 张）
 
-    UserCircle {
-        int user_id FK
-        int circle_id FK
-    }
+| 表 | 主键 | 说明 |
+|:---|:---|:---|
+| `user_circles` | (user_id, circle_id) | 社团成员 |
+| `album_circles` | (album_id, circle_id) | 专辑-社团（多对多） |
+| `album_tags` | (album_id, tag_id) | 专辑-标签（多对多） |
+| `owned_albums` | (user_id, album_id) | 已购 |
+| `favorites` | (user_id, album_id) | 收藏 |
+| `circle_follows` | (user_id, circle_id) | 关注社团 |
 
-    Album {
-        int album_id PK
-        varchar dizzylab_id UK
-        varchar title
-        text info_title
-        text info_content
-        decimal price
-        varchar cover_url
-        timestamp publish_date
-    }
+## 数据表（3 张）
 
-    AlbumCircle {
-        int album_id FK
-        int circle_id FK
-    }
+| 表 | 外键 | 说明 |
+|:---|:---|:---|
+| `work_files` | `album_id → albums` | 曲目，`file_type`: preview/full，`object_key` 存 MinIO 路径 |
+| `comments` | `user_id → users` SET NULL, `album_id → albums` CASCADE | 评论 |
+| `user_follows` | `user_id → users`, `followed_user_id → users` | 预留（dizzylab 无用户关注） |
 
-    WorkFile {
-        int file_id PK
-        int album_id FK
-        varchar file_name
-        varchar object_key
-        varchar file_type "preview / full"
-        varchar track_length
-        bigint file_size
-        int sort_order
-    }
+## 关系图
 
-    Tag {
-        int tag_id PK
-        varchar name
-    }
+```
+users ──┬── owned_albums ──── albums
+        ├── favorites ──────── albums
+        ├── comments ───────── albums
+        ├── user_circles ───── circles
+        ├── circle_follows ─── circles
+        └── user_follows ───── users (self-ref)
 
-    AlbumTag {
-        int album_id FK
-        int tag_id FK
-    }
-
-    Comment {
-        int comment_id PK
-        int user_id FK
-        int album_id FK
-        text content
-        timestamp created_at
-    }
-
-    Favorite {
-        int user_id FK
-        int album_id FK
-        timestamp created_at
-    }
-
-    UserFollow {
-        int user_id PK, FK
-        int followed_user_id PK, FK
-        timestamp created_at
-    }
-
-    CircleFollow {
-        int user_id PK, FK
-        int circle_id PK, FK
-        timestamp created_at
-    }
-
-    OwnedAlbum {
-        int user_id PK, FK
-        int album_id PK, FK
-        timestamp created_at
-    }
+albums ──┬── work_files
+         ├── album_tags ────── tags
+         └── album_circles ─── circles
 ```
 
-# DDL
+## 索引（14 条）
 
-见 [`database/create_database.sql`](../database/create_database.sql)（完整 14 张表 + 14 条索引）。
+- `albums(dizzylab_id)` UNIQUE
+- `users(dizzylab_user_id)` UNIQUE
+- `circles(dizzylab_labelid)` UNIQUE
+- `work_files(album_id)`, `work_files(file_type)`
+- `comments(album_id)`
+- `favorites(user_id)`
+- `albums(publish_date)`
+- `owned_albums(user_id)`, `owned_albums(album_id)`
+- `circle_follows(user_id)`, `circle_follows(circle_id)`
+- `user_follows(user_id)`, `user_follows(followed_user_id)`
+
+## 迁移（幂等）
+
+| 迁移 | 表 | 列 | 用途 |
+|:---|:---|:---|:---|
+| userpage_crawled_at | users | TIMESTAMP | user_pages 爬取追踪 |
+| member_count | circles | INTEGER DEFAULT 0 | circle_members 成员数追踪 |
+
+---
+
+文件位置：`database/create_database.sql`
