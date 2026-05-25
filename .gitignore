@@ -1,4 +1,27 @@
-/database/minio-data
+# ── 编辑器 ──────────────────────────
 /.vscode/
-/tools\minio\minio.exe
-/tools\minio\mc.exe
+/.idea/
+/.claude/
+
+# ── 运行时 ──────────────────────────
+/crawler/env/
+/frontend/node_modules/
+
+# ── 构建产物 ────────────────────────
+/backend/target/
+__pycache__/
+*.pyc
+*.pyo
+*.class
+
+# ── 数据 ────────────────────────────
+/database/minio-data/
+
+# ── 工具二进制 ──────────────────────
+/tools/minio/minio.exe
+/tools/minio/mc.exe
+
+# ── 杂项 ────────────────────────────
+*.log
+.DS_Store
+Thumbs.db
