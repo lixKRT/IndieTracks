@@ -1,6 +1,6 @@
 <!-- 分类浏览页 -->
 <template>
-  <div class="tag-page container">
+  <div class="tag-page container-wide">
     <h1 class="page-title">标签</h1>
 
     <TagFilter
@@ -11,38 +11,28 @@
       @update:price="onPriceChange"
     />
 
-    <div v-if="loading" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>加载中...</p>
-    </div>
-
-    <div v-else-if="albums.length === 0" class="empty-state">
-      <p>没有找到匹配的专辑</p>
-    </div>
-
-    <div v-else class="album-grid">
-      <AlbumCard
-        v-for="album in albums"
-        :key="album.album_id"
-        :album="album"
-        @album-click="goToAlbum"
-        @circle-click="goToCircle"
-        @tag-click="onTagChange"
-        @preview="handlePreview"
-      />
-    </div>
+    <AlbumGrid
+      :albums="albums"
+      :loading="loading"
+      :showAll="true"
+      :maxVisible="48"
+      @album-click="goToAlbum"
+      @circle-click="goToCircle"
+      @tag-click="onTagChange"
+      @preview="handlePreview"
+    />
   </div>
 </template>
 
 <script>
-import AlbumCard from '../components/molecules/AlbumCard.vue';
+import AlbumGrid from '../components/organisms/AlbumGrid.vue';
 import TagFilter from '../components/organisms/TagFilter.vue';
 import { fetchAlbums, getTags, fetchAlbum } from '../api/mock.js';
 import { usePlayerStore } from '../stores/player.js';
 
 export default {
   name: 'TagBrowseView',
-  components: { AlbumCard, TagFilter },
+  components: { AlbumGrid, TagFilter },
   data() {
     return {
       allTags: getTags(),
@@ -106,16 +96,4 @@ export default {
 <style scoped>
 .tag-page { padding-top: var(--spacing-xl); }
 .page-title { font-size: 1.8rem; color: var(--color-text-primary); margin-bottom: var(--spacing-xl); }
-
-.album-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  column-gap: 5%;
-  row-gap: var(--spacing-xl);
-  margin-bottom: var(--spacing-md);
-}
-
-@media (max-width: 639px) {
-  .album-grid { grid-template-columns: repeat(2, 1fr); }
-}
 </style>

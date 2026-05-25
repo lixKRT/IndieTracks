@@ -1,285 +1,261 @@
-/**
- * mock.js — 集中 Mock 数据
- *
- * 约定：
- * - 全链路 snake_case（字段名 = 数据库列名 = 后端 JSON key）
- * - 模拟多表关联结构
- * - 所有接口函数返回 Promise，模拟 200-400ms 网络延迟
- */
-
-// ============================================================
-// 原始数据
-// ============================================================
-
+// 模拟数据 - 标签列表
 const tags = [
-  { tag_id: 1, name: '东方project' },
-  { tag_id: 2, name: '电子音乐' },
-  { tag_id: 3, name: 'Colour Bass' },
-  { tag_id: 4, name: 'Hyper Trance' },
-  { tag_id: 5, name: '纯音乐' },
-  { tag_id: 6, name: '同人音乐' },
-  { tag_id: 7, name: 'Vocaloid' },
-  { tag_id: 8, name: '硬核' },
-  { tag_id: 9, name: 'UK Hardcore' },
-  { tag_id: 10, name: 'Drum and Bass' },
-  { tag_id: 11, name: 'Dubstep' },
-  { tag_id: 12, name: 'House' },
-  { tag_id: 13, name: 'Trance' },
-  { tag_id: 14, name: 'Rock' },
-  { tag_id: 15, name: 'Ambient' }
+  { tag_id: 1, name: '东方Project' },
+  { tag_id: 2, 'name': '电子' },
+  { tag_id: 3, 'name': '摇滚' },
+  { tag_id: 4, 'name': '硬核' },
+  { tag_id: 5, 'name': '纯音乐' },
+  { tag_id: 6, 'name': '管弦乐' },
+  { tag_id: 7, 'name': 'Vocaloid' },
+  { tag_id: 8, 'name': 'Hardcore' },
+  { tag_id: 9, 'name': 'UK Hardcore' },
+  { tag_id: 10, 'name': 'Trance' },
+  { tag_id: 11, 'name': 'House' },
+  { tag_id: 12, 'name': 'Techno' },
+  { tag_id: 13, 'name': '氛围' },
+  { tag_id: 14, 'name': '实验' },
+  { tag_id: 15, 'name': '摇滚融合' }
 ];
 
+// 模拟数据 - 社团列表
 const circles = [
   {
     circle_id: 1,
-    name: 'Chroma_Sounds虹彩',
-    logo_url: 'https://placehold.co/200x200/2a2a2a/ffffff?text=CS',
-    description: '东方同人电子音乐社团。Diversity | Retro-Futurism | Next-Generation'
+    name: 'hisa_knowledge',
+    logo_url: 'https://placehold.co/200x200/2a2a2a/ffffff?text=HK',
+    description: '专注于东方Project管弦乐改编的社团，风格大气磅礴。'
   },
   {
     circle_id: 2,
-    name: '78Records',
-    logo_url: 'https://placehold.co/200x200/2a2a2a/ffffff?text=78',
-    description: '专注于实验电子与硬核音乐的创作团体。'
+    name: 'EXperiment EXtreme',
+    logo_url: 'https://placehold.co/200x200/2a2a2a/ffffff?text=EXEX',
+    description: '硬核电子音乐制作社团，擅长Hardcore、Speedcore等极端风格。'
   },
   {
     circle_id: 3,
-    name: '優しさの配列',
-    logo_url: 'https://placehold.co/200x200/2a2a2a/ffffff?text=YA',
-    description: '氛围音乐与流行电子制作。'
+    name: 'EchoBottle',
+    logo_url: 'https://placehold.co/200x200/2a2a2a/ffffff?text=EB',
+    description: 'Vocaloid同人音乐社团，风格以氛围电子和实验摇滚为主。'
   },
   {
     circle_id: 4,
     name: 'Static World',
     logo_url: 'https://placehold.co/200x200/2a2a2a/ffffff?text=SW',
-    description: '治愈系纯音乐与交响电子创作社团。'
+    description: '纯音乐创作社团，主打治愈系、冬季主题的轻音乐。'
   },
   {
     circle_id: 5,
     name: 'THE FACTOTY OF SHEEP',
-    logo_url: 'https://placehold.co/200x200/2a2a2a/ffffff?text=FS',
-    description: '独立电子音乐厂牌，覆盖多种电子风格。'
+    logo_url: 'https://placehold.co/200x200/2a2a2a/ffffff?text=TFOS',
+    description: '多元化电子音乐社团，涵盖Trance、House、Techno等多种风格。'
   }
 ];
 
+// 模拟数据 - 用户列表
 const users = [
-  { user_id: 1, username: 'Rainbow Illusion', avatar_url: 'https://placehold.co/64x64/444/fff?text=RI', user_role: 'pro' },
-  { user_id: 2, username: 'X-ENON', avatar_url: 'https://placehold.co/64x64/444/fff?text=XE', user_role: 'pro' },
-  { user_id: 3, username: 'Excillex', avatar_url: 'https://placehold.co/64x64/444/fff?text=EX', user_role: 'pro' },
-  { user_id: 4, username: 'Voxelkana', avatar_url: 'https://placehold.co/64x64/444/fff?text=VX', user_role: 'pro' },
-  { user_id: 5, username: 'Shiorei_', avatar_url: 'https://placehold.co/64x64/444/fff?text=SH', user_role: 'pro' },
-  { user_id: 6, username: 'Salty Salt', avatar_url: 'https://placehold.co/64x64/444/fff?text=SS', user_role: 'pro' },
-  { user_id: 7, username: 'Boring-X-', avatar_url: 'https://placehold.co/64x64/444/fff?text=BX', user_role: 'pro' },
-  { user_id: 8, username: 'dj Toast', avatar_url: 'https://placehold.co/64x64/444/fff?text=DT', user_role: 'pro' },
-  { user_id: 9, username: 'Kirisame Records', avatar_url: 'https://placehold.co/64x64/444/fff?text=KR', user_role: 'pro' },
-  { user_id: 10, username: '铁头动力', avatar_url: 'https://placehold.co/64x64/444/fff?text=TT', user_role: 'pro' },
-  { user_id: 11, username: '听众A', avatar_url: 'https://placehold.co/64x64/444/fff?text=A', user_role: 'normal' },
-  { user_id: 12, username: '听众B', avatar_url: 'https://placehold.co/64x64/444/fff?text=B', user_role: 'normal' },
-  { user_id: 13, username: '乐迷小C', avatar_url: 'https://placehold.co/64x64/444/fff?text=C', user_role: 'normal' },
-  { user_id: 14, username: '音乐猎人', avatar_url: 'https://placehold.co/64x64/444/fff?text=MH', user_role: 'normal' }
+  { user_id: 1, username: 'admin', avatar_url: 'https://placehold.co/100x100/000000/ffffff?text=AD', user_role: 'admin' },
+  { user_id: 2, username: 'user1', avatar_url: 'https://placehold.co/100x100/333333/ffffff?text=U1', user_role: 'user' },
+  { user_id: 3, username: 'user2', avatar_url: 'https://placehold.co/100x100/444444/ffffff?text=U2', user_role: 'user' },
+  { user_id: 4, username: 'user3', avatar_url: 'https://placehold.co/100x100/555555/ffffff?text=U3', user_role: 'user' },
+  { user_id: 5, username: 'composer1', avatar_url: 'https://placehold.co/100x100/666666/ffffff?text=C1', user_role: 'pro' },
+  { user_id: 6, username: 'composer2', avatar_url: 'https://placehold.co/100x100/777777/ffffff?text=C2', user_role: 'pro' },
+  { user_id: 7, username: 'composer3', avatar_url: 'https://placehold.co/100x100/888888/ffffff?text=C3', user_role: 'pro' },
+  { user_id: 8, username: 'composer4', avatar_url: 'https://placehold.co/100x100/999999/ffffff?text=C4', user_role: 'pro' },
+  { user_id: 9, username: 'composer5', avatar_url: 'https://placehold.co/100x100/aaaaaa/ffffff?text=C5', user_role: 'pro' },
+  { user_id: 10, username: 'composer6', avatar_url: 'https://placehold.co/100x100/bbbbbb/ffffff?text=C6', user_role: 'pro' },
+  { user_id: 11, username: 'composer7', avatar_url: 'https://placehold.co/100x100/cccccc/ffffff?text=C7', user_role: 'pro' },
+  { user_id: 12, username: 'composer8', avatar_url: 'https://placehold.co/100x100/dddddd/ffffff?text=C8', user_role: 'pro' },
+  { user_id: 13, username: 'listener1', avatar_url: 'https://placehold.co/100x100/eeeeee/ffffff?text=L1', user_role: 'user' },
+  { user_id: 14, username: 'listener2', avatar_url: 'https://placehold.co/100x100/ffff00/ffffff?text=L2', user_role: 'user' }
 ];
 
+// 模拟数据 - 专辑列表
 const albums = [
   {
     album_id: 1,
-    title: 'Touhou Colours：Aquamarine',
+    title: '幻想交响诗',
     circle_id: 1,
-    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=Aquamarine',
-    price: 65.0,
-    publish_date: '2026-05-01',
-    info_title: 'Touhou Colours: Aquamarine',
-    info_content: 'ChromaSounds虹彩第四张专辑A侧。科学技术的进步，真是飞速啊。突然间，有个叫互联网的东西闯入了幻想乡。而我，蕾米莉亚——红魔馆的家主，自然也不能错过这波科技浪潮。',
-    tag_ids: [1, 2, 3, 4],
+    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=Symphony',
+    price: 50.0,
+    publish_date: '2026-01-15',
+    info_title: '幻想交响诗',
+    info_content: 'hisa_knowledge 首张东方Project管弦乐改编专辑，收录8首经典曲目改编。',
+    tag_ids: [1, 6],
     tracks: [
-      { file_id: 1, file_name: 'Transcendence of Fluid Neon - Voxelkana', duration: '4:46', sort_order: 1, file_type: 'preview' },
-      { file_id: 2, file_name: '千年の響き - Shiorei_', duration: '4:40', sort_order: 2, file_type: 'preview' },
-      { file_id: 3, file_name: 'G FREE - Salty Salt', duration: '4:20', sort_order: 3, file_type: 'preview' },
-      { file_id: 4, file_name: 'here and there, after a hangover - Boring-X-', duration: '3:53', sort_order: 4, file_type: 'preview' },
-      { file_id: 5, file_name: 'Phantastic Flowers - Kamino Yoruneko', duration: '6:05', sort_order: 5, file_type: 'preview' },
-      { file_id: 6, file_name: 'LUNARiA - dj Toast', duration: '4:07', sort_order: 6, file_type: 'preview' },
-      { file_id: 7, file_name: 'Encounter the Summer Solstice - Fragrant_MT', duration: '4:01', sort_order: 7, file_type: 'preview' },
-      { file_id: 8, file_name: 'Phase_Orbit - Anicille', duration: '3:45', sort_order: 8, file_type: 'preview' },
-      { file_id: 9, file_name: '「-」 - Afrixon', duration: '9:22', sort_order: 9, file_type: 'full' },
-      { file_id: 10, file_name: '賢者之石 - Herun', duration: '4:30', sort_order: 10, file_type: 'full' },
-      { file_id: 11, file_name: 'Blue Lotus ft. toki - Deltaranged', duration: '6:15', sort_order: 11, file_type: 'full' },
-      { file_id: 12, file_name: 'Evanescent, a shattered realm - W1ldflow3r', duration: '4:42', sort_order: 12, file_type: 'full' },
-      { file_id: 13, file_name: '1764 - Pleinerz', duration: '4:25', sort_order: 13, file_type: 'full' },
-      { file_id: 14, file_name: 'Rearrival - Mirage_Sonata', duration: '4:51', sort_order: 14, file_type: 'full' },
-      { file_id: 15, file_name: 'soranishizumu - Farah', duration: '4:19', sort_order: 15, file_type: 'full' },
-      { file_id: 16, file_name: 'wait for me. - Rainbow Illusion', duration: '4:37', sort_order: 16, file_type: 'full' }
+      { file_id: 1, file_name: '幻想序曲', duration: '3:30', sort_order: 1, file_type: 'preview' },
+      { file_id: 2, file_name: '红魔乡交响诗', duration: '5:15', sort_order: 2, file_type: 'preview' },
+      { file_id: 3, file_name: '妖々夢のテーマ', duration: '4:40', sort_order: 3, file_type: 'preview' },
+      { file_id: 4, file_name: '永夜抄', duration: '6:00', sort_order: 4, file_type: 'full' },
+      { file_id: 5, file_name: '風神録', duration: '5:20', sort_order: 5, file_type: 'full' },
+      { file_id: 6, file_name: '地霊殿', duration: '4:30', sort_order: 6, file_type: 'full' },
+      { file_id: 7, file_name: '星莲船', duration: '5:45', sort_order: 7, file_type: 'full' },
+      { file_id: 8, file_name: '神霊廟', duration: '4:10', sort_order: 8, file_type: 'full' }
     ],
     comments: [
-      { comment_id: 1, user_id: 11, content: 'Voxelkana 的 Tr.01 太惊艳了，Neo Trance 和东方旋律的结合非常自然！', created_at: '2026-05-03' },
-      { comment_id: 2, user_id: 12, content: 'Colour Bass 爱好者必入。Shiorei 和 Salty Salt 的曲目尤其出色。', created_at: '2026-05-05' },
-      { comment_id: 3, user_id: 13, content: '封面设计也很好看，和 Aquamarine 的主题非常贴合。', created_at: '2026-05-08' },
-      { comment_id: 4, user_id: 14, content: '已购，物超所值。16 首曲目这个价格很良心了。', created_at: '2026-05-10' }
+      { comment_id: 1, user_id: 2, content: '管弦乐改编太惊艳了！', created_at: '2026-01-20' },
+      { comment_id: 2, user_id: 3, content: '红魔乡交响诗那段高潮起鸡皮疙瘩', created_at: '2026-01-22' }
     ]
   },
   {
     album_id: 2,
-    title: '（补档）78+13=91',
+    title: 'HYPERNOISE',
     circle_id: 2,
-    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=78%2B13',
-    price: 0,
-    publish_date: '2026-04-28',
-    info_title: '78+13=91',
-    info_content: '78Records 早期作品补档合集，收录 dariacore、gabber、hyper 等多种风格。',
-    tag_ids: [2, 8],
+    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=HYPERNOISE',
+    price: 45.0,
+    publish_date: '2026-01-20',
+    info_title: 'HYPERNOISE',
+    info_content: 'EXperiment EXtreme 硬核电子专辑，高速BPM与极端噪音的完美融合。',
+    tag_ids: [2, 4, 8],
     tracks: [
-      { file_id: 17, file_name: 'DARIACORE ANTHEM', duration: '3:22', sort_order: 1, file_type: 'preview' },
-      { file_id: 18, file_name: 'GABBER DESTROYER', duration: '4:10', sort_order: 2, file_type: 'preview' },
-      { file_id: 19, file_name: 'HYPER DRIVE', duration: '3:45', sort_order: 3, file_type: 'preview' },
-      { file_id: 20, file_name: 'BREAKCORE SUNDAY', duration: '5:01', sort_order: 4, file_type: 'preview' },
-      { file_id: 21, file_name: 'SPEEDCORE NIGHT', duration: '6:33', sort_order: 5, file_type: 'full' },
-      { file_id: 22, file_name: 'HARDCORE RAVE', duration: '4:18', sort_order: 6, file_type: 'full' },
-      { file_id: 23, file_name: 'TERROR DRUMZ', duration: '3:55', sort_order: 7, file_type: 'full' },
-      { file_id: 24, file_name: 'NOISE WALL', duration: '8:00', sort_order: 8, file_type: 'full' }
+      { file_id: 9, file_name: 'NOISE ATTACK', duration: '4:00', sort_order: 1, file_type: 'preview' },
+      { file_id: 10, file_name: 'HYPER SPEED', duration: '3:45', sort_order: 2, file_type: 'preview' },
+      { file_id: 11, file_name: 'CORE DESTRUCTION', duration: '5:10', sort_order: 3, file_type: 'preview' },
+      { file_id: 12, file_name: 'EXTREME BASS', duration: '4:30', sort_order: 4, file_type: 'full' },
+      { file_id: 13, file_name: 'DARKNESS', duration: '6:00', sort_order: 5, file_type: 'full' },
+      { file_id: 14, file_name: 'SPEEDCORE NIGHTMARE', duration: '3:15', sort_order: 6, file_type: 'full' },
+      { file_id: 15, file_name: 'FINAL EXPLOSION', duration: '5:20', sort_order: 7, file_type: 'full' }
     ],
     comments: [
-      { comment_id: 5, user_id: 14, content: '免费专辑质量还这么高，太良心了。', created_at: '2026-05-01' }
+      { comment_id: 3, user_id: 4, content: '耳膜炸裂警告！', created_at: '2026-01-25' },
+      { comment_id: 4, user_id: 5, content: '最喜欢SPEEDCORE NIGHTMARE这段，BPM拉满', created_at: '2026-01-28' }
     ]
   },
   {
     album_id: 3,
-    title: 'Emotional Air',
+    title: '回响瓶',
     circle_id: 3,
-    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=Emotional+Air',
-    price: 50.0,
-    publish_date: '2026-04-25',
-    info_title: 'Emotional Air',
-    info_content: '優しさの配列 最新作。pops 旋律与电子音色的融合，温暖而又充满力量。',
-    tag_ids: [6, 5],
+    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=EchoBottle',
+    price: 0.0,
+    publish_date: '2026-02-01',
+    info_title: '回响瓶',
+    info_content: 'EchoBottle 首张免费专辑，Vocaloid与氛围电子的结合，如梦似幻。',
+    tag_ids: [7, 13, 14],
     tracks: [
-      { file_id: 25, file_name: 'Emotional Air', duration: '4:30', sort_order: 1, file_type: 'preview' },
-      { file_id: 26, file_name: 'Gentle Breeze', duration: '3:55', sort_order: 2, file_type: 'preview' },
-      { file_id: 27, file_name: 'Floating City', duration: '5:12', sort_order: 3, file_type: 'preview' },
-      { file_id: 28, file_name: 'Rainy Window', duration: '4:08', sort_order: 4, file_type: 'full' },
-      { file_id: 29, file_name: 'Starlight Road', duration: '6:00', sort_order: 5, file_type: 'full' },
-      { file_id: 30, file_name: 'Morning Dew', duration: '3:45', sort_order: 6, file_type: 'full' },
-      { file_id: 31, file_name: 'Sunset Memories', duration: '5:22', sort_order: 7, file_type: 'full' },
-      { file_id: 32, file_name: 'Good Night', duration: '2:30', sort_order: 8, file_type: 'full' }
+      { file_id: 16, file_name: '回响瓶', duration: '5:00', sort_order: 1, file_type: 'preview' },
+      { file_id: 17, file_name: '虚ろな空', duration: '4:20', sort_order: 2, file_type: 'preview' },
+      { file_id: 18, file_name: '水底の声', duration: '6:15', sort_order: 3, file_type: 'preview' },
+      { file_id: 19, file_name: '風のメッセージ', duration: '5:30', sort_order: 4, file_type: 'full' },
+      { file_id: 20, file_name: '星の雫', duration: '4:45', sort_order: 5, file_type: 'full' },
+      { file_id: 21, file_name: '永遠の輪廻', duration: '7:00', sort_order: 6, file_type: 'full' }
     ],
     comments: [
-      { comment_id: 6, user_id: 11, content: '很适合在夜晚安静地听。', created_at: '2026-04-28' },
-      { comment_id: 7, user_id: 13, content: 'Emotional Air 这首单曲循环了好几天。', created_at: '2026-05-02' }
+      { comment_id: 5, user_id: 6, content: '免费专辑质量这么高！', created_at: '2026-02-05' },
+      { comment_id: 6, user_id: 7, content: '水底の声这段太治愈了', created_at: '2026-02-08' }
     ]
   },
   {
     album_id: 4,
-    title: '山越し独り',
-    circle_id: 3,
-    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=Yamagoshi',
-    price: 36.0,
-    publish_date: '2026-04-20',
-    info_title: '山越し独り',
-    info_content: 'dreampop 与摇滚的跨界尝试。Joulez 风格贯穿全专。',
-    tag_ids: [6, 14],
+    title: 'Silent World',
+    circle_id: 4,
+    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=Silent',
+    price: 30.0,
+    publish_date: '2026-02-10',
+    info_title: 'Silent World',
+    info_content: 'Static World 首张专辑，纯音乐风格，营造静谧的听觉体验。',
+    tag_ids: [5, 13],
     tracks: [
-      { file_id: 33, file_name: '山越し独り', duration: '5:10', sort_order: 1, file_type: 'preview' },
-      { file_id: 34, file_name: '遠くの灯り', duration: '4:35', sort_order: 2, file_type: 'preview' },
-      { file_id: 35, file_name: '川沿いの道', duration: '3:50', sort_order: 3, file_type: 'preview' },
-      { file_id: 36, file_name: '帰り道', duration: '4:22', sort_order: 4, file_type: 'full' },
-      { file_id: 37, file_name: '星空', duration: '6:15', sort_order: 5, file_type: 'full' },
-      { file_id: 38, file_name: 'ひとり', duration: '2:48', sort_order: 6, file_type: 'full' }
+      { file_id: 22, file_name: 'Silent World', duration: '4:15', sort_order: 1, file_type: 'preview' },
+      { file_id: 23, file_name: 'Morning Breeze', duration: '3:50', sort_order: 2, file_type: 'preview' },
+      { file_id: 24, file_name: 'Quiet Stream', duration: '5:20', sort_order: 3, file_type: 'preview' },
+      { file_id: 25, file_name: 'Evening Glow', duration: '4:40', sort_order: 4, file_type: 'full' },
+      { file_id: 26, file_name: 'Night Sky', duration: '6:10', sort_order: 5, file_type: 'full' },
+      { file_id: 27, file_name: 'Midnight', duration: '3:30', sort_order: 6, file_type: 'full' },
+      { file_id: 28, file_name: 'Dawn', duration: '4:00', sort_order: 7, file_type: 'full' }
     ],
     comments: [
-      { comment_id: 8, user_id: 12, content: '封面很有意境，音乐也是。', created_at: '2026-04-25' }
+      { comment_id: 7, user_id: 8, content: '学习时听太合适了', created_at: '2026-02-15' },
+      { comment_id: 8, user_id: 9, content: 'Morning Breeze这段循环了一整天', created_at: '2026-02-18' }
     ]
   },
   {
     album_id: 5,
-    title: '非对称集：2026冬',
-    circle_id: 2,
-    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=Asymmetric',
-    price: 0,
-    publish_date: '2026-04-18',
-    info_title: '非对称集：2026冬',
-    info_content: '铁头动力 T^T Dynamics 冬季作品集。VOCALOID × 变拍子实验。',
-    tag_ids: [7, 5],
+    title: 'ELECTRONIC DREAMS',
+    circle_id: 5,
+    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=ED',
+    price: 55.0,
+    publish_date: '2026-02-18',
+    info_title: 'ELECTRONIC DREAMS',
+    tag_ids: [2, 10, 11],
     tracks: [
-      { file_id: 39, file_name: '非対称の世界', duration: '4:05', sort_order: 1, file_type: 'preview' },
-      { file_id: 40, file_name: '冬の残響', duration: '5:30', sort_order: 2, file_type: 'preview' },
-      { file_id: 41, file_name: '鏡の中', duration: '3:55', sort_order: 3, file_type: 'preview' },
-      { file_id: 42, file_name: '歪んだ時計', duration: '4:42', sort_order: 4, file_type: 'full' },
-      { file_id: 43, file_name: '氷の城', duration: '6:10', sort_order: 5, file_type: 'full' },
-      { file_id: 44, file_name: '春を待つ', duration: '3:20', sort_order: 6, file_type: 'full' },
-      { file_id: 45, file_name: '非対称集 エピローグ', duration: '2:15', sort_order: 7, file_type: 'full' },
-      { file_id: 46, file_name: 'Bonus Track - Snowfield', duration: '4:00', sort_order: 8, file_type: 'full' }
+      { file_id: 29, file_name: 'Dreamscape', duration: '5:30', sort_order: 1, file_type: 'preview' },
+      { file_id: 30, file_name: 'Cybernetic', duration: '4:45', sort_order: 2, file_type: 'preview' },
+      { file_id: 31, file_name: 'Neon Dreams', duration: '6:00', sort_order: 3, file_type: 'preview' },
+      { file_id: 32, file_name: 'Digital Paradise', duration: '5:15', sort_order: 4, file_type: 'full' },
+      { file_id: 33, file_name: 'Synthwave Nights', duration: '4:30', sort_order: 5, file_type: 'full' },
+      { file_id: 34, file_name: 'Future Retro', duration: '5:45', sort_order: 6, file_type: 'full' },
+      { file_id: 35, file_name: 'Electric Dreams', duration: '6:20', sort_order: 7, file_type: 'full' },
+      { file_id: 36, file_name: 'Final Frontier', duration: '4:00', sort_order: 8, file_type: 'full' }
     ],
     comments: [
-      { comment_id: 9, user_id: 11, content: '变拍子用得很巧妙，VOCALOID 调教也很自然。', created_at: '2026-04-22' }
+      { comment_id: 9, user_id: 10, content: 'Synthwave Nights太有80年代感觉了', created_at: '2026-02-22' },
+      { comment_id: 10, user_id: 11, content: '循环停不下来', created_at: '2026-02-25' }
     ]
   },
   {
     album_id: 6,
-    title: '78+91=13²',
-    circle_id: 2,
-    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=13%C2%B2',
-    price: 45.0,
-    publish_date: '2026-04-15',
-    info_title: '78+91=13²',
-    info_content: 'baile funk × hybrid trap × dubstep。78Records 最具实验性的一张。',
-    tag_ids: [2, 11],
+    title: '幻想电子诗',
+    circle_id: 1,
+    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=Electronic',
+    price: 40.0,
+    publish_date: '2026-03-01',
+    info_title: '幻想电子诗',
+    info_content: 'hisa_knowledge 东方电子管弦融合专辑，传统与现代的碰撞。',
+    tag_ids: [1, 2, 6],
     tracks: [
-      { file_id: 47, file_name: 'BAILE FUNK 3000', duration: '3:30', sort_order: 1, file_type: 'preview' },
-      { file_id: 48, file_name: 'HYBRID TRAP ATTACK', duration: '4:15', sort_order: 2, file_type: 'preview' },
-      { file_id: 49, file_name: 'DUBSTEP KINGDOM', duration: '5:00', sort_order: 3, file_type: 'preview' },
-      { file_id: 50, file_name: 'RIDDIM NIGHT', duration: '3:45', sort_order: 4, file_type: 'full' },
-      { file_id: 51, file_name: 'WOBBLE CITY', duration: '4:20', sort_order: 5, file_type: 'full' },
-      { file_id: 52, file_name: 'BASS CANNON', duration: '3:55', sort_order: 6, file_type: 'full' },
-      { file_id: 53, file_name: 'DROP THE BEAT', duration: '4:10', sort_order: 7, file_type: 'full' },
-      { file_id: 54, file_name: 'OUTRO - Silence', duration: '1:30', sort_order: 8, file_type: 'full' }
+      { file_id: 37, file_name: '幻想電子詩', duration: '4:30', sort_order: 1, file_type: 'preview' },
+      { file_id: 38, file_name: '博麗神社', duration: '5:10', sort_order: 2, file_type: 'preview' },
+      { file_id: 39, file_name: '霊夢のテーマ', duration: '4:20', sort_order: 3, file_type: 'preview' },
+      { file_id: 40, file_name: '魔理沙の冒険', duration: '5:40', sort_order: 4, file_type: 'full' },
+      { file_id: 41, file_name: '紅魔館', duration: '4:50', sort_order: 5, file_type: 'full' },
+      { file_id: 42, file_name: '妖夢', duration: '6:00', sort_order: 6, file_type: 'full' },
+      { file_id: 43, file_name: '幽々子', duration: '5:20', sort_order: 7, file_type: 'full' },
+      { file_id: 44, file_name: 'ファイナルファンタジー', duration: '3:30', sort_order: 8, file_type: 'full' }
     ],
-    comments: []
+    comments: [
+      { comment_id: 11, user_id: 12, content: '管弦+电子的组合太妙了', created_at: '2026-03-05' }
+    ]
   },
   {
     album_id: 7,
-    title: '以宇宙的嗓音',
-    circle_id: 4,
-    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=Cosmos',
-    price: 0,
-    publish_date: '2026-04-12',
-    info_title: '以宇宙的嗓音',
-    info_content: '外星小鸟 首张纯音乐专辑。用声音描绘宇宙的浩瀚。',
-    tag_ids: [5],
+    title: 'NOISE FLOOR',
+    circle_id: 2,
+    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=NOISE',
+    price: 0.0,
+    publish_date: '2026-03-05',
+    info_title: 'NOISE FLOOR',
+    info_content: 'EXperiment EXtreme 免费硬核EP，噪音美学的极致体现。',
+    tag_ids: [2, 4, 8],
     tracks: [
-      { file_id: 55, file_name: '宇宙の声', duration: '4:30', sort_order: 1, file_type: 'preview' },
-      { file_id: 56, file_name: '星雲', duration: '5:15', sort_order: 2, file_type: 'preview' },
-      { file_id: 57, file_name: 'ブラックホール', duration: '6:00', sort_order: 3, file_type: 'preview' },
-      { file_id: 58, file_name: '惑星の軌道', duration: '4:45', sort_order: 4, file_type: 'full' },
-      { file_id: 59, file_name: '彗星', duration: '3:30', sort_order: 5, file_type: 'full' },
-      { file_id: 60, file_name: '銀河', duration: '7:00', sort_order: 6, file_type: 'full' },
-      { file_id: 61, file_name: '地球', duration: '4:00', sort_order: 7, file_type: 'full' },
-      { file_id: 62, file_name: '帰還', duration: '2:45', sort_order: 8, file_type: 'full' }
+      { file_id: 45, file_name: 'NOISE FLOOR', duration: '3:45', sort_order: 1, file_type: 'preview' },
+      { file_id: 46, file_name: 'BASS DROP', duration: '4:10', sort_order: 2, file_type: 'preview' },
+      { file_id: 47, file_name: 'HARDCORE NATION', duration: '5:00', sort_order: 3, file_type: 'preview' },
+      { file_id: 48, file_name: 'EXTREME NOISE', duration: '4:20', sort_order: 4, file_type: 'full' },
+      { file_id: 49, file_name: 'FINAL BATTLE', duration: '3:50', sort_order: 5, file_type: 'full' }
     ],
     comments: [
-      { comment_id: 10, user_id: 13, content: '闭上眼睛听仿佛真的在太空漫游。', created_at: '2026-04-16' }
+      { comment_id: 12, user_id: 13, content: '免费的都这么顶！', created_at: '2026-03-10' }
     ]
   },
   {
     album_id: 8,
-    title: 'negative_film',
-    circle_id: 1,
-    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=Negative',
+    title: '夢の浮橋',
+    circle_id: 3,
+    cover_url: 'https://placehold.co/600x600/2a2a2a/ffffff?text=Yume',
     price: 35.0,
-    publish_date: '2026-04-10',
-    info_title: 'negative_film',
-    info_content: 'hisa_knowledge 管弦东方编曲集。宏大而细腻的交响电子。',
-    tag_ids: [1, 6, 5],
+    publish_date: '2026-03-12',
+    info_title: '夢の浮橋',
+    info_content: 'EchoBottle Vocaloid 叙事专辑，以梦境为主题的音乐故事。',
+    tag_ids: [7, 14, 5],
     tracks: [
-      { file_id: 63, file_name: 'negative_film', duration: '5:20', sort_order: 1, file_type: 'preview' },
-      { file_id: 64, file_name: '紅い瞳', duration: '4:50', sort_order: 2, file_type: 'preview' },
-      { file_id: 65, file_name: '竹林', duration: '6:10', sort_order: 3, file_type: 'preview' },
-      { file_id: 66, file_name: '月時計', duration: '5:00', sort_order: 4, file_type: 'full' },
-      { file_id: 67, file_name: '桜花', duration: '4:35', sort_order: 5, file_type: 'full' },
-      { file_id: 68, file_name: '永遠', duration: '6:50', sort_order: 6, file_type: 'full' },
-      { file_id: 69, file_name: '境界', duration: '5:15', sort_order: 7, file_type: 'full' },
-      { file_id: 70, file_name: '現像', duration: '3:00', sort_order: 8, file_type: 'full' }
+      { file_id: 50, file_name: '夢の浮橋', duration: '5:15', sort_order: 1, file_type: 'preview' },
+      { file_id: 51, file_name: '醒めない夢', duration: '4:30', sort_order: 2, file_type: 'preview' },
+      { file_id: 52, file_name: '夢と現実', duration: '6:00', sort_order: 3, file_type: 'preview' },
+      { file_id: 53, file_name: '記憶の欠片', duration: '4:45', sort_order: 4, file_type: 'full' },
+      { file_id: 54, file_name: '忘却の彼方', duration: '5:20', sort_order: 5, file_type: 'full' },
+      { file_id: 55, file_name: '再び夢へ', duration: '3:50', sort_order: 6, file_type: 'full' },
+      { file_id: 56, file_name: '目覚め', duration: '4:10', sort_order: 7, file_type: 'full' }
     ],
-    comments: [
-      { comment_id: 11, user_id: 14, content: '管弦和东方的结合太棒了。', created_at: '2026-04-14' },
-      { comment_id: 12, user_id: 11, content: '重新编曲的红楼曲目很有新鲜感。', created_at: '2026-04-18' }
-    ]
+    comments: []
   },
   {
     album_id: 9,
@@ -700,6 +676,17 @@ export async function fetchCircles(params = {}) {
       .slice(0, 3)
       .map(([name]) => name);
 
+    // 新增：获取最新的4张预览专辑（取前2个标签）
+    const previewAlbums = circleAlbums
+      .sort((a, b) => new Date(b.publish_date) - new Date(a.publish_date))
+      .slice(0, 4)
+      .map(a => ({
+        album_id: a.album_id,
+        title: a.title,
+        cover_url: a.cover_url,
+        tags: a.tag_ids.map(tid => getTag(tid)?.name).filter(Boolean).slice(0, 2) // 取前2个标签用于展示
+      }));
+
     return {
       circle_id: c.circle_id,
       name: c.name,
@@ -708,7 +695,8 @@ export async function fetchCircles(params = {}) {
       album_count: circleAlbums.length,
       member_count: getCircleMembers(c.circle_id).length,
       latest_album_date: latestAlbumDate,
-      representative_tags: representativeTags
+      representative_tags: representativeTags,
+      preview_albums: previewAlbums // 新增预览专辑字段
     };
   });
 

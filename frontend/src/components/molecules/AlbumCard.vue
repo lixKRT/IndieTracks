@@ -23,17 +23,44 @@
           <span v-for="tag in album.tags.slice(0, 3)" :key="tag" class="tag" @click.stop="$emit('tag-click', tag)">#{{ tag }}</span>
           <span v-if="album.tags.length > 3" class="tag tag-more">+{{ album.tags.length - 3 }}</span>
         </div>
-        <button class="play-btn" @click="$emit('preview', album)"><i class="fas fa-play"></i> 试听</button>
+        <div class="action-buttons">
+          <button 
+            class="favorite-btn" 
+            :class="{ 'is-favorited': isFavorite }"
+            @click.stop="toggleFavorite"
+            :title="isFavorite ? '取消收藏' : '收藏'"
+          >
+            {{ isFavorite ? '★' : '☆' }}
+          </button>
+          <button class="play-btn" @click="$emit('preview', album)"><i class="fas fa-play"></i> 试听</button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import { useFavoriteStore } from '../../stores/favorite.js';
+
 export default {
   name: 'AlbumCard',
   props: { album: { type: Object, required: true } },
-  emits: ['album-click', 'circle-click', 'tag-click', 'preview']
+  emits: ['album-click', 'circle-click', 'tag-click', 'preview'],
+  data() {
+    return {
+      favoriteStore: useFavoriteStore()
+    };
+  },
+  computed: {
+    isFavorite() {
+      return this.favoriteStore.isFavorite(this.album.album_id);
+    }
+  },
+  methods: {
+    toggleFavorite() {
+      this.favoriteStore.toggleFavorite(this.album.album_id);
+    }
+  }
 };
 </script>
 
@@ -154,6 +181,30 @@ export default {
   justify-content: space-between;
   align-items: center;
 }
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
+}
+
+.favorite-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 1.3rem;
+}
+
+.favorite-btn:hover { color: #ff6b6b; }
+.favorite-btn.is-favorited { color: #ff6b6b; }
 
 .album-tags {
   display: flex;

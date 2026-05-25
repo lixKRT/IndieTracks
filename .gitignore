@@ -1,0 +1,39 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+<<<<<<< HEAD
+.deepseek
+data
+.vscode
+
+
+crawler\.deepseek
+crawler\.idea
+
+backend\.idea
+backend\target
+=======
+node_modules
+>>>>>>> 3d6bd94 (第二次提交首页)
