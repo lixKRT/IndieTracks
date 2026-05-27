@@ -85,11 +85,11 @@ const albums = [
       { file_id: 1, file_name: '幻想序曲', duration: '3:30', sort_order: 1, file_type: 'preview' },
       { file_id: 2, file_name: '红魔乡交响诗', duration: '5:15', sort_order: 2, file_type: 'preview' },
       { file_id: 3, file_name: '妖々夢のテーマ', duration: '4:40', sort_order: 3, file_type: 'preview' },
-      { file_id: 4, file_name: '永夜抄', duration: '6:00', sort_order: 4, file_type: 'full' },
-      { file_id: 5, file_name: '風神録', duration: '5:20', sort_order: 5, file_type: 'full' },
-      { file_id: 6, file_name: '地霊殿', duration: '4:30', sort_order: 6, file_type: 'full' },
-      { file_id: 7, file_name: '星莲船', duration: '5:45', sort_order: 7, file_type: 'full' },
-      { file_id: 8, file_name: '神霊廟', duration: '4:10', sort_order: 8, file_type: 'full' }
+      { file_id: 4, file_name: '永夜抄', duration: '6:00', sort_order: 4, file_type: 'preview' },
+      { file_id: 5, file_name: '風神録', duration: '5:20', sort_order: 5, file_type: 'preview' },
+      { file_id: 6, file_name: '地霊殿', duration: '4:30', sort_order: 6, file_type: 'preview' },
+      { file_id: 7, file_name: '星莲船', duration: '5:45', sort_order: 7, file_type: 'preview' },
+      { file_id: 8, file_name: '神霊廟', duration: '4:10', sort_order: 8, file_type: 'preview' }
     ],
     comments: [
       { comment_id: 1, user_id: 2, content: '管弦乐改编太惊艳了！', created_at: '2026-01-20' },
@@ -110,10 +110,10 @@ const albums = [
       { file_id: 9, file_name: 'NOISE ATTACK', duration: '4:00', sort_order: 1, file_type: 'preview' },
       { file_id: 10, file_name: 'HYPER SPEED', duration: '3:45', sort_order: 2, file_type: 'preview' },
       { file_id: 11, file_name: 'CORE DESTRUCTION', duration: '5:10', sort_order: 3, file_type: 'preview' },
-      { file_id: 12, file_name: 'EXTREME BASS', duration: '4:30', sort_order: 4, file_type: 'full' },
-      { file_id: 13, file_name: 'DARKNESS', duration: '6:00', sort_order: 5, file_type: 'full' },
-      { file_id: 14, file_name: 'SPEEDCORE NIGHTMARE', duration: '3:15', sort_order: 6, file_type: 'full' },
-      { file_id: 15, file_name: 'FINAL EXPLOSION', duration: '5:20', sort_order: 7, file_type: 'full' }
+      { file_id: 12, file_name: 'EXTREME BASS', duration: '4:30', sort_order: 4, file_type: 'preview' },
+      { file_id: 13, file_name: 'DARKNESS', duration: '6:00', sort_order: 5, file_type: 'preview' },
+      { file_id: 14, file_name: 'SPEEDCORE NIGHTMARE', duration: '3:15', sort_order: 6, file_type: 'preview' },
+      { file_id: 15, file_name: 'FINAL EXPLOSION', duration: '5:20', sort_order: 7, file_type: 'preview' }
     ],
     comments: [
       { comment_id: 3, user_id: 4, content: '耳膜炸裂警告！', created_at: '2026-01-25' },
@@ -134,9 +134,9 @@ const albums = [
       { file_id: 16, file_name: '回响瓶', duration: '5:00', sort_order: 1, file_type: 'preview' },
       { file_id: 17, file_name: '虚ろな空', duration: '4:20', sort_order: 2, file_type: 'preview' },
       { file_id: 18, file_name: '水底の声', duration: '6:15', sort_order: 3, file_type: 'preview' },
-      { file_id: 19, file_name: '風のメッセージ', duration: '5:30', sort_order: 4, file_type: 'full' },
-      { file_id: 20, file_name: '星の雫', duration: '4:45', sort_order: 5, file_type: 'full' },
-      { file_id: 21, file_name: '永遠の輪廻', duration: '7:00', sort_order: 6, file_type: 'full' }
+      { file_id: 19, file_name: '風のメッセージ', duration: '5:30', sort_order: 4, file_type: 'preview' },
+      { file_id: 20, file_name: '星の雫', duration: '4:45', sort_order: 5, file_type: 'preview' },
+      { file_id: 21, file_name: '永遠の輪廻', duration: '7:00', sort_order: 6, file_type: 'preview' }
     ],
     comments: [
       { comment_id: 5, user_id: 6, content: '免费专辑质量这么高！', created_at: '2026-02-05' },
@@ -157,10 +157,10 @@ const albums = [
       { file_id: 22, file_name: 'Silent World', duration: '4:15', sort_order: 1, file_type: 'preview' },
       { file_id: 23, file_name: 'Morning Breeze', duration: '3:50', sort_order: 2, file_type: 'preview' },
       { file_id: 24, file_name: 'Quiet Stream', duration: '5:20', sort_order: 3, file_type: 'preview' },
-      { file_id: 25, file_name: 'Evening Glow', duration: '4:40', sort_order: 4, file_type: 'full' },
-      { file_id: 26, file_name: 'Night Sky', duration: '6:10', sort_order: 5, file_type: 'full' },
-      { file_id: 27, file_name: 'Midnight', duration: '3:30', sort_order: 6, file_type: 'full' },
-      { file_id: 28, file_name: 'Dawn', duration: '4:00', sort_order: 7, file_type: 'full' }
+      { file_id: 25, file_name: 'Evening Glow', duration: '4:40', sort_order: 4, file_type: 'preview' },
+      { file_id: 26, file_name: 'Night Sky', duration: '6:10', sort_order: 5, file_type: 'preview' },
+      { file_id: 27, file_name: 'Midnight', duration: '3:30', sort_order: 6, file_type: 'preview' },
+      { file_id: 28, file_name: 'Dawn', duration: '4:00', sort_order: 7, file_type: 'preview' }
     ],
     comments: [
       { comment_id: 7, user_id: 8, content: '学习时听太合适了', created_at: '2026-02-15' },
@@ -180,11 +180,11 @@ const albums = [
       { file_id: 29, file_name: 'Dreamscape', duration: '5:30', sort_order: 1, file_type: 'preview' },
       { file_id: 30, file_name: 'Cybernetic', duration: '4:45', sort_order: 2, file_type: 'preview' },
       { file_id: 31, file_name: 'Neon Dreams', duration: '6:00', sort_order: 3, file_type: 'preview' },
-      { file_id: 32, file_name: 'Digital Paradise', duration: '5:15', sort_order: 4, file_type: 'full' },
-      { file_id: 33, file_name: 'Synthwave Nights', duration: '4:30', sort_order: 5, file_type: 'full' },
-      { file_id: 34, file_name: 'Future Retro', duration: '5:45', sort_order: 6, file_type: 'full' },
-      { file_id: 35, file_name: 'Electric Dreams', duration: '6:20', sort_order: 7, file_type: 'full' },
-      { file_id: 36, file_name: 'Final Frontier', duration: '4:00', sort_order: 8, file_type: 'full' }
+      { file_id: 32, file_name: 'Digital Paradise', duration: '5:15', sort_order: 4, file_type: 'preview' },
+      { file_id: 33, file_name: 'Synthwave Nights', duration: '4:30', sort_order: 5, file_type: 'preview' },
+      { file_id: 34, file_name: 'Future Retro', duration: '5:45', sort_order: 6, file_type: 'preview' },
+      { file_id: 35, file_name: 'Electric Dreams', duration: '6:20', sort_order: 7, file_type: 'preview' },
+      { file_id: 36, file_name: 'Final Frontier', duration: '4:00', sort_order: 8, file_type: 'preview' }
     ],
     comments: [
       { comment_id: 9, user_id: 10, content: 'Synthwave Nights太有80年代感觉了', created_at: '2026-02-22' },
@@ -205,11 +205,11 @@ const albums = [
       { file_id: 37, file_name: '幻想電子詩', duration: '4:30', sort_order: 1, file_type: 'preview' },
       { file_id: 38, file_name: '博麗神社', duration: '5:10', sort_order: 2, file_type: 'preview' },
       { file_id: 39, file_name: '霊夢のテーマ', duration: '4:20', sort_order: 3, file_type: 'preview' },
-      { file_id: 40, file_name: '魔理沙の冒険', duration: '5:40', sort_order: 4, file_type: 'full' },
-      { file_id: 41, file_name: '紅魔館', duration: '4:50', sort_order: 5, file_type: 'full' },
-      { file_id: 42, file_name: '妖夢', duration: '6:00', sort_order: 6, file_type: 'full' },
-      { file_id: 43, file_name: '幽々子', duration: '5:20', sort_order: 7, file_type: 'full' },
-      { file_id: 44, file_name: 'ファイナルファンタジー', duration: '3:30', sort_order: 8, file_type: 'full' }
+      { file_id: 40, file_name: '魔理沙の冒険', duration: '5:40', sort_order: 4, file_type: 'preview' },
+      { file_id: 41, file_name: '紅魔館', duration: '4:50', sort_order: 5, file_type: 'preview' },
+      { file_id: 42, file_name: '妖夢', duration: '6:00', sort_order: 6, file_type: 'preview' },
+      { file_id: 43, file_name: '幽々子', duration: '5:20', sort_order: 7, file_type: 'preview' },
+      { file_id: 44, file_name: 'ファイナルファンタジー', duration: '3:30', sort_order: 8, file_type: 'preview' }
     ],
     comments: [
       { comment_id: 11, user_id: 12, content: '管弦+电子的组合太妙了', created_at: '2026-03-05' }
@@ -229,8 +229,8 @@ const albums = [
       { file_id: 45, file_name: 'NOISE FLOOR', duration: '3:45', sort_order: 1, file_type: 'preview' },
       { file_id: 46, file_name: 'BASS DROP', duration: '4:10', sort_order: 2, file_type: 'preview' },
       { file_id: 47, file_name: 'HARDCORE NATION', duration: '5:00', sort_order: 3, file_type: 'preview' },
-      { file_id: 48, file_name: 'EXTREME NOISE', duration: '4:20', sort_order: 4, file_type: 'full' },
-      { file_id: 49, file_name: 'FINAL BATTLE', duration: '3:50', sort_order: 5, file_type: 'full' }
+      { file_id: 48, file_name: 'EXTREME NOISE', duration: '4:20', sort_order: 4, file_type: 'preview' },
+      { file_id: 49, file_name: 'FINAL BATTLE', duration: '3:50', sort_order: 5, file_type: 'preview' }
     ],
     comments: [
       { comment_id: 12, user_id: 13, content: '免费的都这么顶！', created_at: '2026-03-10' }
@@ -250,10 +250,10 @@ const albums = [
       { file_id: 50, file_name: '夢の浮橋', duration: '5:15', sort_order: 1, file_type: 'preview' },
       { file_id: 51, file_name: '醒めない夢', duration: '4:30', sort_order: 2, file_type: 'preview' },
       { file_id: 52, file_name: '夢と現実', duration: '6:00', sort_order: 3, file_type: 'preview' },
-      { file_id: 53, file_name: '記憶の欠片', duration: '4:45', sort_order: 4, file_type: 'full' },
-      { file_id: 54, file_name: '忘却の彼方', duration: '5:20', sort_order: 5, file_type: 'full' },
-      { file_id: 55, file_name: '再び夢へ', duration: '3:50', sort_order: 6, file_type: 'full' },
-      { file_id: 56, file_name: '目覚め', duration: '4:10', sort_order: 7, file_type: 'full' }
+      { file_id: 53, file_name: '記憶の欠片', duration: '4:45', sort_order: 4, file_type: 'preview' },
+      { file_id: 54, file_name: '忘却の彼方', duration: '5:20', sort_order: 5, file_type: 'preview' },
+      { file_id: 55, file_name: '再び夢へ', duration: '3:50', sort_order: 6, file_type: 'preview' },
+      { file_id: 56, file_name: '目覚め', duration: '4:10', sort_order: 7, file_type: 'preview' }
     ],
     comments: []
   },
@@ -271,11 +271,11 @@ const albums = [
       { file_id: 71, file_name: '冬日咏叙调', duration: '5:00', sort_order: 1, file_type: 'preview' },
       { file_id: 72, file_name: '雪の降る街', duration: '4:20', sort_order: 2, file_type: 'preview' },
       { file_id: 73, file_name: '暖炉のそばで', duration: '3:50', sort_order: 3, file_type: 'preview' },
-      { file_id: 74, file_name: '凍える夜', duration: '4:45', sort_order: 4, file_type: 'full' },
-      { file_id: 75, file_name: '静寂', duration: '6:30', sort_order: 5, file_type: 'full' },
-      { file_id: 76, file_name: '春の兆し', duration: '3:15', sort_order: 6, file_type: 'full' },
-      { file_id: 77, file_name: '雪解け', duration: '5:40', sort_order: 7, file_type: 'full' },
-      { file_id: 78, file_name: 'また来年', duration: '2:00', sort_order: 8, file_type: 'full' }
+      { file_id: 74, file_name: '凍える夜', duration: '4:45', sort_order: 4, file_type: 'preview' },
+      { file_id: 75, file_name: '静寂', duration: '6:30', sort_order: 5, file_type: 'preview' },
+      { file_id: 76, file_name: '春の兆し', duration: '3:15', sort_order: 6, file_type: 'preview' },
+      { file_id: 77, file_name: '雪解け', duration: '5:40', sort_order: 7, file_type: 'preview' },
+      { file_id: 78, file_name: 'また来年', duration: '2:00', sort_order: 8, file_type: 'preview' }
     ],
     comments: []
   },
@@ -294,12 +294,12 @@ const albums = [
       { file_id: 80, file_name: 'Neon Pulse', duration: '4:45', sort_order: 2, file_type: 'preview' },
       { file_id: 81, file_name: 'Digital Tears', duration: '5:10', sort_order: 3, file_type: 'preview' },
       { file_id: 82, file_name: 'Binary Heart', duration: '4:20', sort_order: 4, file_type: 'preview' },
-      { file_id: 83, file_name: 'Electric Dreams', duration: '6:00', sort_order: 5, file_type: 'full' },
-      { file_id: 84, file_name: 'Synthetic Love', duration: '5:30', sort_order: 6, file_type: 'full' },
-      { file_id: 85, file_name: 'Pixel Rain', duration: '4:00', sort_order: 7, file_type: 'full' },
-      { file_id: 86, file_name: 'Reboot', duration: '3:45', sort_order: 8, file_type: 'full' },
-      { file_id: 87, file_name: 'Analog Sunset', duration: '5:15', sort_order: 9, file_type: 'full' },
-      { file_id: 88, file_name: 'EMOTIONA -Outro-', duration: '2:00', sort_order: 10, file_type: 'full' }
+      { file_id: 83, file_name: 'Electric Dreams', duration: '6:00', sort_order: 5, file_type: 'preview' },
+      { file_id: 84, file_name: 'Synthetic Love', duration: '5:30', sort_order: 6, file_type: 'preview' },
+      { file_id: 85, file_name: 'Pixel Rain', duration: '4:00', sort_order: 7, file_type: 'preview' },
+      { file_id: 86, file_name: 'Reboot', duration: '3:45', sort_order: 8, file_type: 'preview' },
+      { file_id: 87, file_name: 'Analog Sunset', duration: '5:15', sort_order: 9, file_type: 'preview' },
+      { file_id: 88, file_name: 'EMOTIONA -Outro-', duration: '2:00', sort_order: 10, file_type: 'preview' }
     ],
     comments: [
       { comment_id: 13, user_id: 12, content: '每首曲目都很有层次感，制作精良。', created_at: '2026-04-10' }
@@ -319,11 +319,11 @@ const albums = [
       { file_id: 89, file_name: 'Rebirth', duration: '5:45', sort_order: 1, file_type: 'preview' },
       { file_id: 90, file_name: '新生', duration: '4:30', sort_order: 2, file_type: 'preview' },
       { file_id: 91, file_name: '翼', duration: '5:20', sort_order: 3, file_type: 'preview' },
-      { file_id: 92, file_name: '空へ', duration: '6:10', sort_order: 4, file_type: 'full' },
-      { file_id: 93, file_name: '光', duration: '4:50', sort_order: 5, file_type: 'full' },
-      { file_id: 94, file_name: '再生', duration: '5:00', sort_order: 6, file_type: 'full' },
-      { file_id: 95, file_name: '希望', duration: '3:40', sort_order: 7, file_type: 'full' },
-      { file_id: 96, file_name: '旅立ち', duration: '2:30', sort_order: 8, file_type: 'full' }
+      { file_id: 92, file_name: '空へ', duration: '6:10', sort_order: 4, file_type: 'preview' },
+      { file_id: 93, file_name: '光', duration: '4:50', sort_order: 5, file_type: 'preview' },
+      { file_id: 94, file_name: '再生', duration: '5:00', sort_order: 6, file_type: 'preview' },
+      { file_id: 95, file_name: '希望', duration: '3:40', sort_order: 7, file_type: 'preview' },
+      { file_id: 96, file_name: '旅立ち', duration: '2:30', sort_order: 8, file_type: 'preview' }
     ],
     comments: []
   },
@@ -341,11 +341,11 @@ const albums = [
       { file_id: 97, file_name: 'LoneLine', duration: '4:15', sort_order: 1, file_type: 'preview' },
       { file_id: 98, file_name: '旅路', duration: '5:30', sort_order: 2, file_type: 'preview' },
       { file_id: 99, file_name: '迷い', duration: '4:00', sort_order: 3, file_type: 'preview' },
-      { file_id: 100, file_name: '出会い', duration: '4:45', sort_order: 4, file_type: 'full' },
-      { file_id: 101, file_name: '別れ', duration: '5:20', sort_order: 5, file_type: 'full' },
-      { file_id: 102, file_name: '想い', duration: '3:50', sort_order: 6, file_type: 'full' },
-      { file_id: 103, file_name: '辿り着く場所', duration: '6:00', sort_order: 7, file_type: 'full' },
-      { file_id: 104, file_name: 'また歩き出す', duration: '3:00', sort_order: 8, file_type: 'full' }
+      { file_id: 100, file_name: '出会い', duration: '4:45', sort_order: 4, file_type: 'preview' },
+      { file_id: 101, file_name: '別れ', duration: '5:20', sort_order: 5, file_type: 'preview' },
+      { file_id: 102, file_name: '想い', duration: '3:50', sort_order: 6, file_type: 'preview' },
+      { file_id: 103, file_name: '辿り着く場所', duration: '6:00', sort_order: 7, file_type: 'preview' },
+      { file_id: 104, file_name: 'また歩き出す', duration: '3:00', sort_order: 8, file_type: 'preview' }
     ],
     comments: [
       { comment_id: 14, user_id: 13, content: '一人旅のお供にぴったり。', created_at: '2026-04-01' }
@@ -365,8 +365,8 @@ const albums = [
       { file_id: 105, file_name: 'Moving', duration: '5:00', sort_order: 1, file_type: 'preview' },
       { file_id: 106, file_name: 'Deep Breath', duration: '4:30', sort_order: 2, file_type: 'preview' },
       { file_id: 107, file_name: 'Waves', duration: '6:15', sort_order: 3, file_type: 'preview' },
-      { file_id: 108, file_name: 'Rise', duration: '5:45', sort_order: 4, file_type: 'full' },
-      { file_id: 109, file_name: 'Float', duration: '4:20', sort_order: 5, file_type: 'full' }
+      { file_id: 108, file_name: 'Rise', duration: '5:45', sort_order: 4, file_type: 'preview' },
+      { file_id: 109, file_name: 'Float', duration: '4:20', sort_order: 5, file_type: 'preview' }
     ],
     comments: []
   },
@@ -384,8 +384,8 @@ const albums = [
       { file_id: 110, file_name: 'Other Worldly Power', duration: '4:50', sort_order: 1, file_type: 'preview' },
       { file_id: 111, file_name: 'Spirit Barrier', duration: '5:30', sort_order: 2, file_type: 'preview' },
       { file_id: 112, file_name: 'Danmaku Rain', duration: '4:15', sort_order: 3, file_type: 'preview' },
-      { file_id: 113, file_name: 'Last Spell', duration: '6:00', sort_order: 4, file_type: 'full' },
-      { file_id: 114, file_name: 'Game Over', duration: '3:00', sort_order: 5, file_type: 'full' }
+      { file_id: 113, file_name: 'Last Spell', duration: '6:00', sort_order: 4, file_type: 'preview' },
+      { file_id: 114, file_name: 'Game Over', duration: '3:00', sort_order: 5, file_type: 'preview' }
     ],
     comments: []
   },
@@ -403,11 +403,11 @@ const albums = [
       { file_id: 115, file_name: 'IONOSPHERE', duration: '5:20', sort_order: 1, file_type: 'preview' },
       { file_id: 116, file_name: 'STRATOSPHERE', duration: '4:45', sort_order: 2, file_type: 'preview' },
       { file_id: 117, file_name: 'TROPOSPHERE', duration: '6:10', sort_order: 3, file_type: 'preview' },
-      { file_id: 118, file_name: 'MESOSPHERE', duration: '5:00', sort_order: 4, file_type: 'full' },
-      { file_id: 119, file_name: 'THERMOSPHERE', duration: '7:30', sort_order: 5, file_type: 'full' },
-      { file_id: 120, file_name: 'EXOSPHERE', duration: '4:00', sort_order: 6, file_type: 'full' },
-      { file_id: 121, file_name: 'REENTRY', duration: '3:45', sort_order: 7, file_type: 'full' },
-      { file_id: 122, file_name: 'LANDING', duration: '2:30', sort_order: 8, file_type: 'full' }
+      { file_id: 118, file_name: 'MESOSPHERE', duration: '5:00', sort_order: 4, file_type: 'preview' },
+      { file_id: 119, file_name: 'THERMOSPHERE', duration: '7:30', sort_order: 5, file_type: 'preview' },
+      { file_id: 120, file_name: 'EXOSPHERE', duration: '4:00', sort_order: 6, file_type: 'preview' },
+      { file_id: 121, file_name: 'REENTRY', duration: '3:45', sort_order: 7, file_type: 'preview' },
+      { file_id: 122, file_name: 'LANDING', duration: '2:30', sort_order: 8, file_type: 'preview' }
     ],
     comments: [
       { comment_id: 15, user_id: 14, content: '从第一首到最后一首完全不踩刹车，太爽了。', created_at: '2026-03-25' }
@@ -427,9 +427,9 @@ const albums = [
       { file_id: 123, file_name: '绫号宇宙', duration: '4:30', sort_order: 1, file_type: 'preview' },
       { file_id: 124, file_name: '星間飛行', duration: '3:55', sort_order: 2, file_type: 'preview' },
       { file_id: 125, file_name: '通信衛星', duration: '5:10', sort_order: 3, file_type: 'preview' },
-      { file_id: 126, file_name: '宇宙ステーション', duration: '4:40', sort_order: 4, file_type: 'full' },
-      { file_id: 127, file_name: '惑星探査', duration: '6:20', sort_order: 5, file_type: 'full' },
-      { file_id: 128, file_name: '帰還信号', duration: '3:15', sort_order: 6, file_type: 'full' }
+      { file_id: 126, file_name: '宇宙ステーション', duration: '4:40', sort_order: 4, file_type: 'preview' },
+      { file_id: 127, file_name: '惑星探査', duration: '6:20', sort_order: 5, file_type: 'preview' },
+      { file_id: 128, file_name: '帰還信号', duration: '3:15', sort_order: 6, file_type: 'preview' }
     ],
     comments: []
   },
@@ -447,10 +447,10 @@ const albums = [
       { file_id: 129, file_name: 'DETACHMENT', duration: '4:00', sort_order: 1, file_type: 'preview' },
       { file_id: 130, file_name: 'CORE MELTDOWN', duration: '3:30', sort_order: 2, file_type: 'preview' },
       { file_id: 131, file_name: 'TERROR SQUAD', duration: '5:00', sort_order: 3, file_type: 'preview' },
-      { file_id: 132, file_name: 'GABBA GABBA HEY', duration: '4:15', sort_order: 4, file_type: 'full' },
-      { file_id: 133, file_name: 'NOISE CANNON', duration: '6:00', sort_order: 5, file_type: 'full' },
-      { file_id: 134, file_name: 'BREAKCORE RUINS', duration: '5:30', sort_order: 6, file_type: 'full' },
-      { file_id: 135, file_name: 'ATTACHMENT', duration: '3:00', sort_order: 7, file_type: 'full' }
+      { file_id: 132, file_name: 'GABBA GABBA HEY', duration: '4:15', sort_order: 4, file_type: 'preview' },
+      { file_id: 133, file_name: 'NOISE CANNON', duration: '6:00', sort_order: 5, file_type: 'preview' },
+      { file_id: 134, file_name: 'BREAKCORE RUINS', duration: '5:30', sort_order: 6, file_type: 'preview' },
+      { file_id: 135, file_name: 'ATTACHMENT', duration: '3:00', sort_order: 7, file_type: 'preview' }
     ],
     comments: [
       { comment_id: 16, user_id: 12, content: '音量警告！戴上耳机效果更佳。', created_at: '2026-03-20' }
@@ -470,8 +470,8 @@ const albums = [
       { file_id: 136, file_name: 'Together We Rewind', duration: '5:00', sort_order: 1, file_type: 'preview' },
       { file_id: 137, file_name: 'Flashback', duration: '4:30', sort_order: 2, file_type: 'preview' },
       { file_id: 138, file_name: 'Rewind Time', duration: '5:45', sort_order: 3, file_type: 'preview' },
-      { file_id: 139, file_name: 'Fast Forward', duration: '4:15', sort_order: 4, file_type: 'full' },
-      { file_id: 140, file_name: 'Pause', duration: '3:00', sort_order: 5, file_type: 'full' }
+      { file_id: 139, file_name: 'Fast Forward', duration: '4:15', sort_order: 4, file_type: 'preview' },
+      { file_id: 140, file_name: 'Pause', duration: '3:00', sort_order: 5, file_type: 'preview' }
     ],
     comments: []
   },
@@ -489,8 +489,8 @@ const albums = [
       { file_id: 141, file_name: '伪春', duration: '5:20', sort_order: 1, file_type: 'preview' },
       { file_id: 142, file_name: 'Revisit', duration: '4:10', sort_order: 2, file_type: 'preview' },
       { file_id: 143, file_name: '残響', duration: '6:00', sort_order: 3, file_type: 'preview' },
-      { file_id: 144, file_name: '朧', duration: '3:45', sort_order: 4, file_type: 'full' },
-      { file_id: 145, file_name: '泡沫', duration: '4:30', sort_order: 5, file_type: 'full' }
+      { file_id: 144, file_name: '朧', duration: '3:45', sort_order: 4, file_type: 'preview' },
+      { file_id: 145, file_name: '泡沫', duration: '4:30', sort_order: 5, file_type: 'preview' }
     ],
     comments: [
       { comment_id: 17, user_id: 13, content: 'Vocaloid 和 ambient 的结合意外地协调。', created_at: '2026-03-15' }
