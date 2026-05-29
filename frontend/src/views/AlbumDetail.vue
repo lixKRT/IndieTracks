@@ -67,7 +67,7 @@
                     @click="goToTag(tag.name)"
                   >#{{ tag.name }}</span>
                 </div>
-
+ 
                 <!-- 曲目列表（可播放） -->
                 <div class="section" v-if="album.tracks && album.tracks.length">
                   <h3>曲目列表</h3>
@@ -104,6 +104,7 @@
               <div class="side-card buy-card">
                 <div class="price-row">
                   <span class="price-num">¥ {{ album.price || '免费' }}</span>
+                  <span class="price-label" v-if="album.price > 0">数字专辑</span>
                   <span class="price-label free" v-else>免费下载</span>
                 </div>
                 <button class="buy-btn" @click="handleBuy">
