@@ -33,8 +33,8 @@
           </div>
 
           <div class="form-group">
-            <label for="email">邮箱</label>
-            <input id="email" type="email" v-model="formData.email" required>
+            <label for="email">{{ showLoginModal ? '用户名或邮箱' : '邮箱' }}</label>
+            <input id="email" :type="showLoginModal ? 'text' : 'email'" v-model="formData.email" required>
           </div>
 
           <div class="form-group">
@@ -47,8 +47,17 @@
             <input id="confirmPassword" type="password" v-model="formData.confirmPassword" required>
           </div>
 
-          <button type="submit" class="btn-submit">
-            {{ showLoginModal ? '登录' : '注册' }}
+          <div v-if="showLoginModal" class="form-group remember-me">
+            <label>
+              <input type="checkbox" v-model="formData.rememberMe">
+              <span>记住我（30天）</span>
+            </label>
+          </div>
+
+          <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+
+          <button type="submit" class="btn-submit" :disabled="submitting">
+            {{ submitting ? '处理中...' : (showLoginModal ? '登录' : '注册') }}
           </button>
         </form>
       </div>
@@ -60,6 +69,7 @@
 import Navbar from '../components/organisms/Navbar.vue';
 import FooterSection from '../components/organisms/FooterSection.vue';
 import PlayerBar from '../components/organisms/PlayerBar.vue';
+import { useUserStore } from '../stores/user.js';
 
 export default {
   name: 'MainLayout',
@@ -68,8 +78,17 @@ export default {
     return {
       showLoginModal: false,
       showRegisterModal: false,
-      formData: { username: '', email: '', password: '', confirmPassword: '' }
+      submitting: false,
+      errorMsg: '',
+      formData: { username: '', email: '', password: '', confirmPassword: '', rememberMe: false }
     };
+  },
+  setup() {
+    const userStore = useUserStore();
+    return { userStore };
+  },
+  mounted() {
+    this.userStore.init();
   },
   methods: {
     handleSearch(query) {
@@ -80,18 +99,39 @@ export default {
     closeModals() {
       this.showLoginModal = false;
       this.showRegisterModal = false;
+      this.errorMsg = '';
       this.resetForm();
     },
     resetForm() {
-      this.formData = { username: '', email: '', password: '', confirmPassword: '' };
+      this.formData = { username: '', email: '', password: '', confirmPassword: '', rememberMe: false };
     },
-    handleSubmit() {
-      if (this.showRegisterModal && this.formData.password !== this.formData.confirmPassword) {
-        alert('密码不匹配！');
-        return;
+    async handleSubmit() {
+      this.errorMsg = '';
+      this.submitting = true;
+      try {
+        if (this.showRegisterModal) {
+          if (this.formData.password !== this.formData.confirmPassword) {
+            this.errorMsg = '密码不匹配';
+            return;
+          }
+          await this.userStore.doRegister({
+            username: this.formData.username,
+            email: this.formData.email,
+            password: this.formData.password
+          });
+        } else {
+          await this.userStore.doLogin({
+            account: this.formData.email,
+            password: this.formData.password,
+            remember_me: this.formData.rememberMe
+          });
+        }
+        this.closeModals();
+      } catch (e) {
+        this.errorMsg = e.response?.data?.error || '操作失败';
+      } finally {
+        this.submitting = false;
       }
-      console.log(`${this.showLoginModal ? '登录' : '注册'} 表单提交:`, this.formData);
-      this.closeModals();
     }
   }
 };
@@ -100,6 +140,112 @@ export default {
 <style scoped>
 .layout-main {
   min-height: calc(100vh - 200px);
-  padding-bottom: 80px; /* 给固定底部的播放器留空间 */
+  padding-bottom: 80px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  padding: 2rem;
+  width: 400px;
+  max-width: 90vw;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.modal-header h3 {
+  font-size: 1.2rem;
+  color: var(--color-text-primary);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--color-text-dim);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.3rem;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"] {
+  width: 100%;
+  padding: 0.6rem;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.remember-me label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.remember-me input[type="checkbox"] {
+  accent-color: var(--color-accent);
+}
+
+.error-msg {
+  color: var(--color-accent);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.btn-submit {
+  padding: 0.7rem;
+  background: var(--color-accent);
+  color: var(--color-text-primary);
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 </style>

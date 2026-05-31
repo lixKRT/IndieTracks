@@ -16,10 +16,12 @@
       :loading="loading"
       :showAll="true"
       :maxVisible="48"
+      :favorited-ids="favorite.favoriteAlbumIds"
       @album-click="goToAlbum"
       @circle-click="goToCircle"
       @tag-click="onTagChange"
       @preview="handlePreview"
+      @toggle-favorite="handleToggleFavorite"
     />
   </div>
 </template>
@@ -27,8 +29,11 @@
 <script>
 import AlbumGrid from '../components/organisms/AlbumGrid.vue';
 import TagFilter from '../components/organisms/TagFilter.vue';
-import { fetchAlbums, getTags, fetchAlbum } from '../api';
-import { usePlayerStore } from '../stores/player.js';
+import { fetchAlbums, getTags } from '../api';
+import { useFavoriteStore } from '../stores/favorite.js';
+import { useNavigation } from '../composables/navigation.js';
+import { useAuthGuard } from '../composables/authGuard.js';
+import { usePreviewPlay } from '../composables/previewPlay.js';
 
 export default {
   name: 'TagBrowseView',
@@ -41,6 +46,13 @@ export default {
       albums: [],
       loading: true
     };
+  },
+  setup() {
+    const favorite = useFavoriteStore();
+    const { goToAlbum, goToCircle } = useNavigation();
+    const { guard } = useAuthGuard();
+    const { playPreview } = usePreviewPlay();
+    return { favorite, goToAlbum, goToCircle, guard, playPreview };
   },
   watch: {
     filterTag() { this.loadAlbums(); },
@@ -82,13 +94,11 @@ export default {
       this.filterPrice = price;
       this.$router.replace({ query: { ...this.$route.query, price: price || undefined } });
     },
-    goToAlbum(album) { this.$router.push(`/album/${album.album_id}`); },
-    goToCircle(album) { this.$router.push(`/label/${album.circle_id}`); },
-    handlePreview(album) {
-      fetchAlbum(album.album_id).then(detail => {
-        const player = usePlayerStore();
-        player.playAlbumTracks(detail.tracks, 0);
-      });
+    async handlePreview(album) {
+      await this.playPreview(album.album_id);
+    },
+    handleToggleFavorite(album) {
+      this.guard(() => this.favorite.toggleFavorite(album.album_id));
     }
   }
 };

@@ -15,6 +15,7 @@ python scripts/windows/run-crawlers.py
 | 脚本 | 用途 | 前置条件 |
 |:---|:---|:---|
 | `_common.py` | 共享工具库——find_psql、psql、read/write_json、run_scrapy、check_minio | Python 3.10+ |
+| `setup-crawler.py` | **一键部署**——建 venv → 装依赖 → 配数据库 → 建表 → 检查 MinIO → 跑测试 | Python 3.11+ |
 | `setup-database.py` | 5 步建库建表——找 psql → 填账号 → 测连接 → 执行 SQL → 可选清空 | PostgreSQL 已安装 |
 | `setup-minio.py` | 5 步部署 MinIO——检查下载→启动(循环等 30s)→建 bucket→建用户→写配置 | — |
 | `run-crawlers.py` | 爬虫启动器——5 项前置检查 → 首次全量 / 增量更新 | venv 已创建，PostgreSQL + MinIO 就绪 |
@@ -63,19 +64,48 @@ python scripts/windows/run-crawlers.py
 | 5 | `user_pages` | 用户已购/收藏/关注 |
 | 6 | `album_bulk` (full, max=0) | 最终全量刷新 |
 
-## 社团详情解析（共享函数）
+## 架构说明
+
+### Pipeline（重构版）
+
+Pipeline 使用 `item_registry` 注册表调度，不再有 isinstance 链：
+- 新增 Item 只需在 `items.py` 定义 + `item_registry.register()`
+- FK 解析失败时 `logger.warning` 警告（不再静默 None）
+- 关闭时打印写入汇总：`Pipeline 写入汇总: AlbumItem=50 | WorkFileItem=320 | ...`
+
+### Repository（统一持久化层）
+
+所有 DB 操作通过 `repository.py`：
+- FK 缓存：`_album_id_cache` / `_circle_id_cache` / `_user_id_cache` / `_tag_id_cache`
+- Upsert：`upsert_album()` / `upsert_user()` 等 12 种
+- 直接 SQL：`update_role()` / `mark_user_crawled()` / `is_user_page_fresh()` 等
+- 蜘蛛直写：`user_pages` / `user_roles` / `circle` 通过 Repository 直接写 DB
+
+### 存储后端
+
+`storage.py` 提供 `StorageBackend` 抽象：
+- `MinioBackend` — 生产环境，下载 CDN 文件 + 上传 MinIO
+- `MemoryBackend` — 测试用，不发起真实 HTTP 请求
+- 向后兼容：`minio.py` 代理到 `storage.py`
+
+### 延迟控制（统一走 `utils/delay.py`）
+
+| 函数 | 用途 | 阻塞 |
+|:---|:---|:---|
+| `schedule_album_delay(min, rand, callback)` | 专辑间延迟 | 不阻塞（reactor.callLater） |
+| `schedule_track_delay(min, rand)` | 曲目间延迟 | 阻塞（time.sleep，因下载已阻塞） |
+| `schedule_circle_delay(delay, callback)` | 社团间延迟 | 不阻塞（reactor.callLater） |
+
+### 社团详情解析（共享函数）
 
 `utils/circle.py` 提供社团详情页解析，供 `circle.py` 和 `album_base.py` 复用：
 
 | 函数 | 功能 | 返回 |
 |:---|:---|:---|
 | `extract_circle_info(response)` | 提取描述 + logo | `(description, logo_key)` |
-| `yield_circle_members(response, labelid)` | 解析成员列表 | yield `UserItem` + `UserCircleItem` |
+| `yield_circle_members(response, labelid)` | 解析成员列表 | yield `UserItem`(role=pro) + `UserCircleItem` |
 
-- `circle.py`：独立爬取社团详情（全量/增量）
-- `album_base.py::parse_circle_detail`：爬取专辑时同步爬取社团详情，更新 `circles` 表
-
-## 爬虫 MinIO 文件下载
+### MinIO 文件下载
 
 | 资源类型 | MinIO 前缀 | 自动识别规则 | 调用位置 |
 |:---|:---|:---|:---|

@@ -1,5 +1,7 @@
 """共享解析函数。"""
 
+from __future__ import annotations
+
 import json
 import logging
 import re
@@ -18,11 +20,21 @@ def safe_json_load(response) -> dict | None:
 
 
 def check_response_ok(response) -> bool:
-    """检查 HTTP 响应状态是否为 2xx，非 200 打 warning 并返回 False。"""
-    if response.status >= 400:
-        logger.warning("HTTP %d: %s", response.status, response.url)
-        return False
-    return True
+    """检查 HTTP 响应状态是否可接受。
+
+    - 2xx: OK
+    - 3xx: 警告但不阻断（Scrapy 通常已处理重定向）
+    - 429: 返回 False（应由 Scrapy retry 中间件处理，而非静默跳过）
+    - 400+: 返回 False
+    """
+    status = response.status
+    if 200 <= status < 300:
+        return True
+    if 300 <= status < 400:
+        logger.warning("HTTP %d 重定向: %s", status, response.url)
+        return True  # 不阻断，Scrapy 已处理
+    logger.warning("HTTP %d: %s", status, response.url)
+    return False
 
 
 def extract_user_id(url: str) -> int | None:
@@ -33,6 +45,8 @@ def extract_user_id(url: str) -> int | None:
 
 def parse_date_cn(text: str) -> datetime | None:
     """解析"2026年5月1日" → datetime。"""
+    if not text:
+        return None
     m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", text)
     if m:
         return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))

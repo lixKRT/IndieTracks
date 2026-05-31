@@ -1,24 +1,21 @@
 <!-- 专辑网格（有机体） -->
 <template>
   <div class="album-grid-container">
-    <div v-if="loading" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>加载中...</p>
-    </div>
+    <LoadingSpinner v-if="loading" />
 
-    <div v-else-if="albums.length === 0" class="empty-state">
-      <p>暂无专辑</p>
-    </div>
+    <EmptyState v-else-if="albums.length === 0" message="暂无专辑" />
 
     <div class="album-grid">
       <AlbumCard
         v-for="album in albums"
         :key="album.album_id"
         :album="album"
+        :is-favorited="favoritedIds.includes(album.album_id)"
         @album-click="album => $emit('album-click', album)"
         @circle-click="album => $emit('circle-click', album)"
         @tag-click="tag => $emit('tag-click', tag)"
         @preview="album => $emit('preview', album)"
+        @toggle-favorite="album => $emit('toggle-favorite', album)"
       />
     </div>
 
@@ -32,17 +29,20 @@
 
 <script>
 import AlbumCard from '../../components/molecules/AlbumCard.vue';
+import LoadingSpinner from '../../components/atoms/LoadingSpinner.vue';
+import EmptyState from '../../components/atoms/EmptyState.vue';
 
 export default {
   name: 'AlbumGrid',
-  components: { AlbumCard },
+  components: { AlbumCard, LoadingSpinner, EmptyState },
   props: {
     albums: { type: Array, default: () => [] },
     loading: { type: Boolean, default: true },
     loadingMore: { type: Boolean, default: false },
-    hasMore: { type: Boolean, default: false }
+    hasMore: { type: Boolean, default: false },
+    favoritedIds: { type: Array, default: () => [] }
   },
-  emits: ['album-click', 'circle-click', 'tag-click', 'preview', 'load-more']
+  emits: ['album-click', 'circle-click', 'tag-click', 'preview', 'load-more', 'toggle-favorite']
 };
 </script>
 

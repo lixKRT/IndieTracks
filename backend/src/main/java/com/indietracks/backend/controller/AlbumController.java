@@ -1,27 +1,31 @@
 package com.indietracks.backend.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.indietracks.backend.annotation.CurrentUser;
 import com.indietracks.backend.dto.AlbumDetail;
 import com.indietracks.backend.dto.AlbumListItem;
+import com.indietracks.backend.dto.CommentRequest;
+import com.indietracks.backend.dto.PagedResponse;
 import com.indietracks.backend.service.AlbumService;
+import com.indietracks.backend.service.CommentService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/albums")
 public class AlbumController {
 
     private final AlbumService albumService;
+    private final CommentService commentService;
 
-    public AlbumController(AlbumService albumService) {
+    public AlbumController(AlbumService albumService, CommentService commentService) {
         this.albumService = albumService;
+        this.commentService = commentService;
     }
 
     @GetMapping
-    public ResponseEntity<Map<String, Object>> getAlbums(
+    public ResponseEntity<PagedResponse<AlbumListItem>> getAlbums(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int page_size,
             @RequestParam(required = false) String tag,
@@ -30,31 +34,30 @@ public class AlbumController {
             @RequestParam(defaultValue = "publish_date_desc") String sort) {
 
         IPage<AlbumListItem> result = albumService.getAlbumList(page, page_size, tag, search, price, sort);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("data", result.getRecords());
-        response.put("total", result.getTotal());
-        response.put("page", result.getCurrent());
-        response.put("page_size", result.getSize());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(PagedResponse.of(
+                result.getRecords(), result.getTotal(), result.getCurrent(), result.getSize()));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AlbumDetail> getAlbum(@PathVariable Integer id) {
         AlbumDetail detail = albumService.getAlbumDetail(id);
-        if (detail == null) {
-            return ResponseEntity.notFound().build();
-        }
+        if (detail == null) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(detail);
     }
 
     @GetMapping("/{id}/comments")
-    public ResponseEntity<Map<String, Object>> getComments(
+    public ResponseEntity<PagedResponse<AlbumDetail.CommentInfo>> getComments(
             @PathVariable Integer id,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "5") int page_size) {
+        return ResponseEntity.ok(commentService.getCommentsPaged(id, page, page_size));
+    }
 
-        Map<String, Object> result = albumService.getComments(id, page, page_size);
-        return ResponseEntity.ok(result);
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<?> addComment(@PathVariable Integer id,
+                                        @Valid @RequestBody CommentRequest req,
+                                        @CurrentUser Integer userId) {
+        commentService.addComment(id, userId, req.getContent());
+        return ResponseEntity.ok(commentService.getCommentsPaged(id, 1, 5));
     }
 }

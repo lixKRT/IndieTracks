@@ -20,7 +20,22 @@
           <div class="search-container">
             <input type="text" placeholder="搜索专辑、社团..." class="search-input" v-model="searchQuery" @keyup.enter="onSearch">
           </div>
-          <div class="auth-buttons">
+
+          <!-- 已登录 -->
+          <div v-if="userStore.isLoggedIn" class="user-menu">
+            <div class="user-info" @click="showDropdown = !showDropdown">
+              <img v-if="userStore.user?.avatar_url" :src="userStore.user.avatar_url" class="user-avatar" />
+              <span v-else class="user-avatar-placeholder"><i class="fas fa-user"></i></span>
+              <span class="user-name">{{ userStore.user?.username }}</span>
+            </div>
+            <div v-if="showDropdown" class="dropdown">
+              <router-link :to="`/user/${userStore.user?.user_id}`" class="dropdown-item" @click="showDropdown = false">个人主页</router-link>
+              <button class="dropdown-item" @click="handleLogout">退出登录</button>
+            </div>
+          </div>
+
+          <!-- 未登录 -->
+          <div v-else class="auth-buttons">
             <button class="btn btn-login" @click="$emit('login')">登录</button>
             <button class="btn btn-register" @click="$emit('register')">注册</button>
           </div>
@@ -31,11 +46,16 @@
 </template>
 
 <script>
+import { useUserStore } from '../../stores/user.js';
+
 export default {
   name: 'Navbar',
   emits: ['search', 'login', 'register'],
   data() {
-    return { searchQuery: '', mobileOpen: false };
+    return { searchQuery: '', mobileOpen: false, showDropdown: false };
+  },
+  setup() {
+    return { userStore: useUserStore() };
   },
   methods: {
     onSearch() {
@@ -43,6 +63,12 @@ export default {
         this.$emit('search', this.searchQuery);
         this.mobileOpen = false;
       }
+    },
+    async handleLogout() {
+      await this.userStore.doLogout();
+      this.showDropdown = false;
+      this.mobileOpen = false;
+      this.$router.push('/');
     }
   }
 };
@@ -84,6 +110,18 @@ export default {
 .btn-login { background: var(--color-bg-secondary); border-right: 1px solid var(--color-border-light); }
 .btn-register { background: #4CAF50; }
 
+/* 用户菜单 */
+.user-menu { position: relative; }
+.user-info { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.3rem 0.6rem; transition: background 0.2s; }
+.user-info:hover { background: rgba(255,255,255,0.05); }
+.user-avatar { width: 40px; height: 40px; object-fit: cover }
+.user-avatar-placeholder { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--color-bg-tertiary); color: var(--color-text-dim); font-size: 1rem }
+.user-name { font-size: 0.85rem; color: var(--color-text-primary); white-space: nowrap; }
+
+.dropdown { position: absolute; top: 100%; right: 0; background: var(--color-bg-secondary); border: 1px solid var(--color-border); min-width: 120px; z-index: 10; }
+.dropdown-item { display: block; width: 100%; padding: 0.5rem 1rem; background: none; border: none; color: var(--color-text-primary); font-size: 0.85rem; text-align: left; cursor: pointer; text-decoration: none; transition: background 0.2s; }
+.dropdown-item:hover { background: rgba(255,255,255,0.05); color: var(--color-accent); }
+
 @media (max-width: 768px) {
   .hamburger { display: flex; }
   .nav-menu { display: none; width: 100%; flex-direction: column; align-items: stretch; gap: var(--spacing-md); padding-top: var(--spacing-md); }
@@ -93,5 +131,7 @@ export default {
   .search-container { max-width: none; width: 100%; }
   .auth-buttons { flex-direction: column; }
   .btn { text-align: center; padding: var(--spacing-sm); }
+  .user-menu { width: 100%; }
+  .dropdown { position: static; width: 100%; }
 }
 </style>

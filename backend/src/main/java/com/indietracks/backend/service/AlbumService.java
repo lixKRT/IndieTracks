@@ -6,40 +6,37 @@ import com.indietracks.backend.dto.AlbumDetail;
 import com.indietracks.backend.dto.AlbumListItem;
 import com.indietracks.backend.entity.Album;
 import com.indietracks.backend.mapper.AlbumMapper;
+import com.indietracks.backend.util.UrlPresignHelper;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class AlbumService {
 
     private final AlbumMapper albumMapper;
-    private final MinioService minioService;
+    private final UrlPresignHelper urlPresign;
 
-    public AlbumService(AlbumMapper albumMapper, MinioService minioService) {
+    public AlbumService(AlbumMapper albumMapper, UrlPresignHelper urlPresign) {
         this.albumMapper = albumMapper;
-        this.minioService = minioService;
+        this.urlPresign = urlPresign;
     }
 
     public IPage<AlbumListItem> getAlbumList(int page, int pageSize, String tag, String search, String price, String sort) {
         Page<AlbumListItem> pageParam = new Page<>(page, pageSize);
         IPage<AlbumListItem> result = albumMapper.selectAlbumList(pageParam, tag, search, price, sort);
-        result.getRecords().forEach(this::convertAlbumListUrls);
+        urlPresign.presignAlbumList(result.getRecords());
         return result;
     }
 
     public AlbumDetail getAlbumDetail(Integer albumId) {
         Album album = albumMapper.selectById(albumId);
-        if (album == null) {
-            return null;
-        }
+        if (album == null) return null;
 
         AlbumDetail detail = new AlbumDetail();
         detail.setAlbum_id(album.getAlbum_id());
         detail.setTitle(album.getTitle());
-        detail.setCover_url(minioService.getPresignedUrl(album.getCover_url()));
+        detail.setCover_url(album.getCover_url());
         detail.setPrice(album.getPrice());
         detail.setPublish_date(album.getPublish_date());
         detail.setInfo_title(album.getInfo_title());
@@ -47,9 +44,6 @@ public class AlbumService {
 
         // 社团信息
         AlbumDetail.AlbumCircleInfo circle = albumMapper.selectCircleByAlbumId(albumId);
-        if (circle != null) {
-            circle.setLogo_url(minioService.getPresignedUrl(circle.getLogo_url()));
-        }
         detail.setCircle(circle);
 
         // 标签
@@ -58,35 +52,19 @@ public class AlbumService {
         // 曲目 + 预签名 URL
         List<AlbumDetail.TrackInfo> tracks = albumMapper.selectTracksByAlbumId(albumId);
         for (AlbumDetail.TrackInfo track : tracks) {
-            track.setPreview_url(minioService.getPresignedUrl(getObjectKeyFromTrack(track, album)));
+            track.setPreview_url(getObjectKeyFromTrack(track, album));
         }
         detail.setTracks(tracks);
 
-        // 评论（首页 5 条，头像 URL 转换）
+        // 评论（首页 5 条）
         List<AlbumDetail.CommentInfo> comments = albumMapper.selectCommentsPage(albumId, 5, 0);
-        comments.forEach(c -> c.setAvatar_url(minioService.getPresignedUrl(c.getAvatar_url())));
         detail.setComments(comments);
 
+        // 统一预签名
+        urlPresign.presignAlbumDetail(detail);
+        urlPresign.presignTracks(detail.getTracks());
+
         return detail;
-    }
-
-    public Map<String, Object> getComments(Integer albumId, int page, int pageSize) {
-        int total = albumMapper.countCommentsByAlbumId(albumId);
-        int offset = (page - 1) * pageSize;
-        List<AlbumDetail.CommentInfo> comments = albumMapper.selectCommentsPage(albumId, pageSize, offset);
-        comments.forEach(c -> c.setAvatar_url(minioService.getPresignedUrl(c.getAvatar_url())));
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("data", comments);
-        result.put("total", total);
-        result.put("page", page);
-        result.put("page_size", pageSize);
-        return result;
-    }
-
-    private void convertAlbumListUrls(AlbumListItem item) {
-        item.setCover_url(minioService.getPresignedUrl(item.getCover_url()));
-        item.setCircle_logo_url(minioService.getPresignedUrl(item.getCircle_logo_url()));
     }
 
     private String getObjectKeyFromTrack(AlbumDetail.TrackInfo track, Album album) {

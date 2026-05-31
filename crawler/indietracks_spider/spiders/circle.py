@@ -9,6 +9,8 @@ circle — 社团爬虫
     scrapy crawl circle
 """
 
+from __future__ import annotations
+
 import logging
 from urllib.parse import quote
 
@@ -16,20 +18,21 @@ import scrapy
 from scrapy.exceptions import DontCloseSpider
 from scrapy import signals
 
+from indietracks_spider.db_mixin import DbSpiderMixin
 from indietracks_spider.items import UserCircleItem
 from indietracks_spider.utils.config_loader import (
     get_delay_config,
     get_spider_config,
 )
 from indietracks_spider.utils.constants import BASE
-from indietracks_spider.utils.db import get_connection, close_connection
+from indietracks_spider.utils.delay import schedule_circle_delay
 from indietracks_spider.utils.parsing import check_response_ok
 from indietracks_spider.utils.circle import extract_circle_info, yield_circle_members
 
 logger = logging.getLogger(__name__)
 
 
-class CircleSpider(scrapy.Spider):
+class CircleSpider(DbSpiderMixin, scrapy.Spider):
     name = "circle"
 
     custom_settings = {
@@ -47,8 +50,6 @@ class CircleSpider(scrapy.Spider):
 
         self._processed = 0
         self._skipped = 0
-        self._db_conn = None
-        self._db_cur = None
         self._pending_circles: list[tuple] = []
         self._delay_pending = False
 
@@ -68,40 +69,15 @@ class CircleSpider(scrapy.Spider):
         if self._delay_pending or self._pending_circles:
             raise DontCloseSpider
 
-    def _ensure_db(self):
-        if self._db_cur is not None:
-            return
-        self._db_conn, self._db_cur = get_connection()
-
     def _circle_up_to_date(self, circle_id: int) -> bool:
         """检查社团成员数是否与上次爬取一致。"""
         self._ensure_db()
-        self._db_cur.execute(
-            """SELECT c.member_count, COUNT(uc.user_id)
-               FROM circles c
-               LEFT JOIN user_circles uc ON uc.circle_id = c.circle_id
-               WHERE c.circle_id = %s
-               GROUP BY c.circle_id""",
-            (circle_id,),
-        )
-        row = self._db_cur.fetchone()
-        if row is None:
-            return False
-        stored_count, actual_count = row
-        return stored_count is not None and stored_count == actual_count
-
-    def closed(self, reason):
-        close_connection(self._db_conn, self._db_cur)
-        self.logger.info(
-            "circle 结束 | processed=%d | skipped=%d | reason=%s",
-            self._processed,
-            self._skipped,
-            reason,
-        )
+        return self.repo.get_circle_up_to_date(circle_id)
 
     # ── 调度 ─────────────────────────────────────────
 
-    def _schedule_next(self):
+    def _pop_next_circle(self) -> scrapy.Request | None:
+        """从队列取出下一个待爬社团，返回 Request 或 None。"""
         while self._pending_circles:
             circle_id, dizzylab_labelid, name = self._pending_circles.pop(0)
 
@@ -120,28 +96,23 @@ class CircleSpider(scrapy.Spider):
                 self._skipped,
             )
 
-            self.crawler.engine.crawl(
-                scrapy.Request(
-                    f"{BASE}/l/{quote(name)}/",
-                    callback=self.parse_circle_detail,
-                    meta={
-                        "_circle_id": circle_id,
-                        "_dizzylab_labelid": dizzylab_labelid,
-                        "_circle_name": name,
-                    },
-                    dont_filter=True,
-                ),
+            return scrapy.Request(
+                f"{BASE}/l/{quote(name)}/",
+                callback=self.parse_circle_detail,
+                meta={
+                    "_circle_id": circle_id,
+                    "_dizzylab_labelid": dizzylab_labelid,
+                    "_circle_name": name,
+                },
+                dont_filter=True,
             )
-            return
+        return None
 
     # ── 入口 ─────────────────────────────────────────
 
-    def start_requests(self):
+    async def start(self):
         self._ensure_db()
-        self._db_cur.execute(
-            "SELECT circle_id, dizzylab_labelid, name FROM circles ORDER BY circle_id"
-        )
-        circles = self._db_cur.fetchall()
+        circles = self.repo.get_all_circles()
 
         if not circles:
             self.logger.warning("circles 表为空，无社团可爬")
@@ -149,8 +120,10 @@ class CircleSpider(scrapy.Spider):
 
         self.logger.info("从数据库读取到 %d 个社团", len(circles))
         self._pending_circles = list(circles)
-        self._schedule_next()
-        yield from ()
+
+        req = self._pop_next_circle()
+        if req:
+            yield req
 
     # ── 解析社团详情页 ──────────────────────────────
 
@@ -158,8 +131,7 @@ class CircleSpider(scrapy.Spider):
         if not check_response_ok(response):
             self.logger.warning("社团详情页异常，跳过")
             self._delay_pending = True
-            from twisted.internet import reactor
-            reactor.callLater(self._circle_delay, self._on_delay_done)
+            schedule_circle_delay(self._circle_delay, self._on_delay_done)
             return
 
         circle_id = response.meta["_circle_id"]
@@ -176,24 +148,30 @@ class CircleSpider(scrapy.Spider):
             if isinstance(item, UserCircleItem):
                 member_count += 1
 
-        # 更新社团描述、logo、成员数
-        self._ensure_db()
-        self._db_cur.execute(
-            """UPDATE circles
-               SET description = %s,
-                   logo_url = COALESCE(%s, logo_url),
-                   member_count = %s
-               WHERE circle_id = %s""",
-            (description, logo_key, member_count, circle_id),
-        )
+        # 更新社团描述、logo、成员数（异常保护，确保延迟回调始终注册）
+        try:
+            self._ensure_db()
+            self.repo.update_circle_info(circle_id, description, logo_key, member_count)
+            self.logger.info("  %s: 成员=%d", name, member_count)
+        except Exception:
+            self.logger.error("  社团 %s DB 写入失败", name, exc_info=True)
 
-        self.logger.info("  %s: 成员=%d", name, member_count)
-
-        # 社团间延迟（不阻塞 reactor）
+        # 社团间延迟（不阻塞 reactor）—— 无论 DB 是否成功都注册
         self._delay_pending = True
-        from twisted.internet import reactor
-        reactor.callLater(self._circle_delay, self._on_delay_done)
+        schedule_circle_delay(self._circle_delay, self._on_delay_done)
 
     def _on_delay_done(self):
         self._delay_pending = False
-        self._schedule_next()
+        try:
+            req = self._pop_next_circle()
+            if req:
+                self.crawler.engine.crawl(req)
+        except Exception:
+            self.logger.error("社团调度异常", exc_info=True)
+            # 异常后仍尝试继续处理剩余社团
+            try:
+                req = self._pop_next_circle()
+                if req:
+                    self.crawler.engine.crawl(req)
+            except Exception:
+                self.logger.error("社团调度二次异常，放弃", exc_info=True)

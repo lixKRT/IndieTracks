@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.indietracks.backend.mapper.CommentMapper">
+
+    <!-- 专辑评论（分页） -->
+    <select id="selectCommentsPage" resultType="com.indietracks.backend.dto.AlbumDetail$CommentInfo">
+        SELECT
+            cm.comment_id,
+            cm.user_id,
+            u.username,
+            u.avatar_url,
+            cm.content,
+            cm.created_at
+        FROM comments cm
+        LEFT JOIN users u ON cm.user_id = u.user_id
+        WHERE cm.album_id = #{album_id}
+        ORDER BY cm.comment_id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 专辑评论总数 -->
+    <select id="countCommentsByAlbumId" resultType="int">
+        SELECT COUNT(*) FROM comments WHERE album_id = #{album_id}
+    </select>
+
+</mapper>

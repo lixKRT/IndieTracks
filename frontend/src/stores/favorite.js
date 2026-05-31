@@ -1,74 +1,45 @@
 import { defineStore } from 'pinia';
+import { addFavorite, removeFavorite, checkFavorite, getFavorites } from '../api';
 
 export const useFavoriteStore = defineStore('favorite', {
   state: () => ({
-    // 使用 Set 存储已收藏的专辑 ID，便于快速查找
-    favoriteAlbumIds: new Set()
+    favoriteAlbumIds: []
   }),
-  
+
   getters: {
-    // 检查专辑是否已收藏
-    isFavorite: (state) => (albumId) => {
-      return state.favoriteAlbumIds.has(albumId);
-    },
-    
-    // 获取所有收藏的专辑 ID 数组
-    favoriteIdsArray: (state) => {
-      return Array.from(state.favoriteAlbumIds);
-    }
+    isFavorite: (state) => (albumId) => state.favoriteAlbumIds.includes(albumId)
   },
-  
+
   actions: {
-    // 初始化时从 localStorage 加载
-    initFromStorage() {
-      try {
-        const stored = localStorage.getItem('indie-tracks-favorites');
-        if (stored) {
-          const ids = JSON.parse(stored);
-          this.favoriteAlbumIds = new Set(ids);
-        }
-      } catch (e) {
-        console.error('加载收藏数据失败:', e);
-      }
-    },
-    
-    // 切换收藏状态
-    toggleFavorite(albumId) {
-      if (this.favoriteAlbumIds.has(albumId)) {
-        this.favoriteAlbumIds.delete(albumId);
+    async toggleFavorite(albumId) {
+      const idx = this.favoriteAlbumIds.indexOf(albumId);
+      if (idx >= 0) {
+        await removeFavorite(albumId);
+        this.favoriteAlbumIds.splice(idx, 1);
       } else {
-        this.favoriteAlbumIds.add(albumId);
+        await addFavorite(albumId);
+        this.favoriteAlbumIds.push(albumId);
       }
-      // 保存到 localStorage
-      this.saveToStorage();
-      console.log(`专辑 ${albumId} 收藏状态已更新`);
     },
-    
-    // 添加收藏
-    addFavorite(albumId) {
-      this.favoriteAlbumIds.add(albumId);
-      this.saveToStorage();
-    },
-    
-    // 取消收藏
-    removeFavorite(albumId) {
-      this.favoriteAlbumIds.delete(albumId);
-      this.saveToStorage();
-    },
-    
-    // 批量设置收藏状态（用于从后端加载数据时）
-    setFavorites(albumIds) {
-      this.favoriteAlbumIds = new Set(albumIds);
-      this.saveToStorage();
-    },
-    
-    // 保存到 localStorage
-    saveToStorage() {
+
+    async check(albumId) {
       try {
-        localStorage.setItem('indie-tracks-favorites', JSON.stringify(Array.from(this.favoriteAlbumIds)));
-      } catch (e) {
-        console.error('保存收藏数据失败:', e);
-      }
+        const data = await checkFavorite(albumId);
+        const idx = this.favoriteAlbumIds.indexOf(albumId);
+        if (data.favorited && idx < 0) {
+          this.favoriteAlbumIds.push(albumId);
+        } else if (!data.favorited && idx >= 0) {
+          this.favoriteAlbumIds.splice(idx, 1);
+        }
+        return data.favorited;
+      } catch { return false; }
+    },
+
+    async loadAll() {
+      try {
+        const data = await getFavorites();
+        this.favoriteAlbumIds = data.map(a => a.album_id);
+      } catch { this.favoriteAlbumIds = []; }
     }
   }
 });

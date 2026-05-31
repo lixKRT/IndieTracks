@@ -1,4 +1,4 @@
-<!-- 专辑卡片（分子）— 横向布局，桌面 2 列 -->
+<!-- 专辑卡片（分子）— 横向布局，纯展示组件，通过 props/emits 通信 -->
 <template>
   <div class="album-card">
     <div class="card-top">
@@ -25,13 +25,13 @@
           <span v-if="album.tags.length > 3" class="tag tag-more">+{{ album.tags.length - 3 }}</span>
         </div>
         <div class="action-buttons">
-          <button 
-            class="favorite-btn" 
-            :class="{ 'is-favorited': isFavorite }"
-            @click.stop="toggleFavorite"
-            :title="isFavorite ? '取消收藏' : '收藏'"
+          <button
+            class="favorite-btn"
+            :class="{ 'is-favorited': isFavorited }"
+            @click.stop="$emit('toggle-favorite', album)"
+            :title="isFavorited ? '取消收藏' : '收藏'"
           >
-            {{ isFavorite ? '★' : '☆' }}
+            {{ isFavorited ? '★' : '☆' }}
           </button>
           <button class="play-btn" @click="$emit('preview', album)"><i class="fas fa-play"></i> 试听</button>
         </div>
@@ -41,27 +41,13 @@
 </template>
 
 <script>
-import { useFavoriteStore } from '../../stores/favorite.js';
-
 export default {
   name: 'AlbumCard',
-  props: { album: { type: Object, required: true } },
-  emits: ['album-click', 'circle-click', 'tag-click', 'preview'],
-  data() {
-    return {
-      favoriteStore: useFavoriteStore()
-    };
+  props: {
+    album: { type: Object, required: true },
+    isFavorited: { type: Boolean, default: false }
   },
-  computed: {
-    isFavorite() {
-      return this.favoriteStore.isFavorite(this.album.album_id);
-    }
-  },
-  methods: {
-    toggleFavorite() {
-      this.favoriteStore.toggleFavorite(this.album.album_id);
-    }
-  }
+  emits: ['album-click', 'circle-click', 'tag-click', 'preview', 'toggle-favorite']
 };
 </script>
 
@@ -219,8 +205,8 @@ export default {
   font-size: 1.3rem;
 }
 
-.favorite-btn:hover { color: #ff6b6b; }
-.favorite-btn.is-favorited { color: #ff6b6b; }
+.favorite-btn:hover { color: var(--color-accent); }
+.favorite-btn.is-favorited { color: var(--color-accent); }
 
 .album-tags {
   display: flex;

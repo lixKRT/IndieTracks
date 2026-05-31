@@ -1,38 +1,60 @@
+<!-- 社团卡片（分子）— 带预览专辑堆叠 -->
 <template>
-  <div class="circle-card" @click="$emit('click', circle)">
-    <div class="circle-avatar">
-      <img :src="circle.logo_url" :alt="circle.name" class="circle-logo">
+  <div class="circle-card">
+    <div class="circle-info" @click="$emit('circle-click', circle)">
+      <div class="circle-logo">
+        <img :src="circle.logo_url" :alt="circle.name">
+      </div>
+      <div class="circle-details">
+        <h2 class="circle-name">{{ circle.name }}</h2>
+        <p class="circle-desc" v-if="circle.description">{{ circle.description }}</p>
+        <div class="circle-tags" v-if="circle.representative_tags && circle.representative_tags.length">
+          <span
+            v-for="tag in circle.representative_tags"
+            :key="tag"
+            class="tag"
+            @click.stop="$emit('tag-click', tag)"
+          >#{{ tag }}</span>
+        </div>
+        <div class="circle-stats">
+          <span><i class="fas fa-compact-disc"></i> {{ circle.album_count }} 张专辑</span>
+          <span v-if="circle.member_count"><i class="fas fa-users"></i> {{ circle.member_count }} 名成员</span>
+          <button
+            v-if="showFollow"
+            class="follow-btn"
+            :class="{ followed: isFollowed }"
+            @click.stop="$emit('toggle-follow', circle)"
+          >{{ isFollowed ? '已关注' : '关注' }}</button>
+        </div>
+      </div>
     </div>
-    <div class="circle-info">
-      <h3 class="circle-name">{{ circle.name }}</h3>
-      <p class="circle-desc">{{ circle.description }}</p>
-      
-      <!-- 标签区域：阻止点击冒泡到卡片，独立处理标签跳转 -->
-      <div class="circle-tags" v-if="circle.representative_tags && circle.representative_tags.length">
-        <span
-          v-for="tag in circle.representative_tags"
-          :key="tag"
-          class="tag"
-          @click.stop="$emit('tag-click', tag)"
-        >#{{ tag }}</span>
-      </div>
 
-      <div class="circle-stats">
-        <div class="stat-item">
-          <i class="fas fa-compact-disc"></i>
-          <span>{{ circle.album_count }} 张专辑</span>
+    <div class="albums-stack" v-if="circle.preview_albums && circle.preview_albums.length">
+      <div
+        v-for="(album, idx) in circle.preview_albums"
+        :key="album.album_id"
+        class="stack-item"
+        :style="getStackStyle(idx, circle.preview_albums.length)"
+        @click.stop="$emit('album-click', album)"
+      >
+        <div class="stack-cover">
+          <img :src="album.cover_url" :alt="album.title">
         </div>
-        <div class="stat-item">
-          <i class="fas fa-users"></i>
-          <span>{{ circle.member_count }} 名成员</span>
-        </div>
-        <div v-if="circle.latest_album_date" class="stat-item">
-          <i class="fas fa-calendar-alt"></i>
-          <span>最新发行: {{ circle.latest_album_date }}</span>
+        <div class="stack-caption">
+          <div class="stack-title">{{ album.title }}</div>
+          <div class="stack-tags">
+            <span v-for="t in (album.tags || []).slice(0, 1)" :key="t">#{{ t }}</span>
+          </div>
         </div>
       </div>
-
-      <button class="circle-action" @click.stop="$emit('click', circle)">查看社团 →</button>
+      <div
+        v-if="circle.album_count > 4"
+        class="stack-more"
+        @click.stop="$emit('circle-click', circle)"
+      >
+        <span>+{{ circle.album_count - 4 }}</span>
+        <i class="fas fa-arrow-right"></i>
+      </div>
     </div>
   </div>
 </template>
@@ -40,153 +62,284 @@
 <script>
 export default {
   name: 'CircleCard',
-  props: { circle: { type: Object, required: true } },
-  emits: ['click', 'tag-click']
+  props: {
+    circle: { type: Object, required: true },
+    isFollowed: { type: Boolean, default: false },
+    showFollow: { type: Boolean, default: true }
+  },
+  emits: ['circle-click', 'tag-click', 'toggle-follow', 'album-click'],
+  methods: {
+    getStackStyle(index, total) {
+      const angle = (index - (total - 1) / 2) * 2.5;
+      const offsetX = (index - (total - 1) / 2) * 4;
+      const zIndex = total - index;
+      return {
+        transform: `rotate(${angle}deg) translateX(${offsetX}px)`,
+        zIndex: zIndex,
+        marginRight: index === total - 1 ? '0' : '-12px'
+      };
+    }
+  }
 };
 </script>
 
 <style scoped>
 .circle-card {
-  display: flex;
-  gap: var(--spacing-xl);
-  padding: var(--spacing-xl);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
-  cursor: pointer;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.2s;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .circle-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.3);
-  border-color: var(--color-accent);
-}
-
-.circle-avatar {
-  flex-shrink: 0;
-  width: 140px;
-  height: 140px;
-  overflow: hidden;
-  background: var(--color-bg-tertiary);
-}
-
-.circle-logo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s;
-}
-
-.circle-card:hover .circle-logo {
-  transform: scale(1.05);
+  transform: translateY(-6px);
+  box-shadow: 0 18px 28px -8px rgba(0, 0, 0, 0.4);
 }
 
 .circle-info {
-  flex: 1;
+  padding: var(--spacing-lg);
+  cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.2s;
+}
+
+.circle-info:hover {
+  background: rgba(255, 107, 107, 0.02);
+}
+
+.circle-logo {
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+  overflow: hidden;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  transition: transform 0.2s;
+}
+
+.circle-card:hover .circle-logo {
+  transform: scale(1.02);
+}
+
+.circle-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.circle-details {
+  flex: 1;
+  min-width: 0;
 }
 
 .circle-name {
-  font-size: 1.6rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--color-text-primary);
-  line-height: 1.2;
-  transition: color 0.2s;
-}
-
-.circle-card:hover .circle-name {
-  color: var(--color-accent);
+  margin-bottom: 0.4rem;
+  line-height: 1.3;
+  letter-spacing: -0.2px;
 }
 
 .circle-desc {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: var(--color-text-muted);
-  line-height: 1.5;
-  margin-bottom: var(--spacing-xs);
+  line-height: 1.45;
+  margin-bottom: 0.6rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .circle-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: var(--spacing-xs) 0;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
 }
 
 .tag {
-  background: rgba(255, 107, 107, 0.15);
+  background: linear-gradient(135deg, rgba(255,107,107,0.12), rgba(255,107,107,0.05));
   color: var(--color-accent);
-  font-size: 0.75rem;
-  padding: 0.2rem 0.7rem;
-  border-radius: 0;
-  letter-spacing: 0.3px;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.6rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  border-radius: 2px;
+  font-weight: 500;
 }
 
 .tag:hover {
-  background: rgba(255, 107, 107, 0.3);
+  background: rgba(255,107,107,0.25);
+  transform: translateY(-1px);
 }
 
 .circle-stats {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-lg);
-  margin-top: var(--spacing-xs);
-  font-size: 0.85rem;
+  align-items: center;
+  gap: var(--spacing-md);
+  font-size: 0.7rem;
   color: var(--color-text-dim);
 }
 
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.follow-btn {
+  padding: 0.25rem 0.8rem;
+  background: var(--color-accent);
+  color: var(--color-text-primary);
+  border: none;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+.follow-btn.followed {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
 }
 
-.stat-item i {
-  width: 18px;
+.circle-stats i {
+  margin-right: 0.25rem;
+  width: 14px;
   color: var(--color-accent);
 }
 
-.circle-action {
-  align-self: flex-start;
-  margin-top: var(--spacing-sm);
-  background: transparent;
-  border: 1px solid var(--color-border-light);
-  color: var(--color-text-primary);
-  padding: 0.5rem 1.2rem;
-  font-size: 0.85rem;
+/* 专辑堆叠 */
+.albums-stack {
+  display: flex;
+  align-items: flex-end;
+  padding: var(--spacing-md) var(--spacing-lg) var(--spacing-lg);
+  background: rgba(0, 0, 0, 0.25);
+  overflow-x: auto;
+  scrollbar-width: thin;
+  gap: 2px;
+  border-top: 1px solid var(--color-border);
+}
+
+.stack-item {
+  flex-shrink: 0;
+  width: 110px;
+  transition: all 0.2s ease;
   cursor: pointer;
-  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-tertiary);
+  border-radius: 4px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0,0,0,0.2);
+  overflow: hidden;
 }
 
-.circle-action:hover {
+.stack-item:hover {
+  transform: translateY(-6px) rotate(0deg) !important;
+  z-index: 10 !important;
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4);
+}
+
+.stack-cover {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+}
+
+.stack-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.2s;
+}
+
+.stack-item:hover .stack-cover img {
+  transform: scale(1.03);
+}
+
+.stack-caption {
+  padding: 8px 8px;
+  background: var(--color-bg-secondary);
+}
+
+.stack-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+
+.stack-tags {
+  font-size: 0.65rem;
+  color: var(--color-accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.stack-tags span {
+  background: none;
+  padding: 0;
+}
+
+.stack-more {
+  flex-shrink: 0;
+  width: 110px;
+  border: 1px dashed var(--color-border);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.25s;
+  color: var(--color-text-muted);
+  font-size: 1.3rem;
+  font-weight: 600;
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(145deg, var(--color-bg-secondary), var(--color-bg-primary));
+}
+
+.stack-more:hover {
   background: var(--color-accent);
-  border-color: var(--color-accent);
   color: var(--color-bg-primary);
+  border-color: var(--color-accent);
+  transform: scale(0.98);
 }
 
-/* 响应式：平板以下调整 */
+.stack-more i {
+  font-size: 1rem;
+  transition: transform 0.2s;
+}
+
+.stack-more:hover i {
+  transform: translateX(3px);
+}
+
+/* 响应式 */
 @media (max-width: 768px) {
-  .circle-card {
+  .circle-info {
     flex-direction: column;
-    align-items: center;
     text-align: center;
   }
-  .circle-avatar {
-    width: 120px;
-    height: 120px;
+  .circle-logo {
+    margin: 0 auto;
   }
-  .circle-stats {
-    justify-content: center;
+  .stack-item,
+  .stack-more {
+    width: 90px;
   }
-  .circle-action {
-    align-self: center;
-  }
-  .circle-tags {
-    justify-content: center;
+  .circle-name {
+    font-size: 1.1rem;
   }
 }
 </style>

@@ -8,6 +8,8 @@ album_incremental — 增量爬虫
     scrapy crawl album_incremental
 """
 
+from __future__ import annotations
+
 import logging
 
 import scrapy
@@ -15,8 +17,7 @@ from scrapy.exceptions import CloseSpider
 
 from indietracks_spider.spiders.album_base import BaseAlbumSpider
 from indietracks_spider.utils.config_loader import get_delay_config
-from indietracks_spider.utils.constants import BASE, API_DISCS, PAGE_SIZE
-from indietracks_spider.utils.parsing import safe_json_load, check_response_ok
+from indietracks_spider.utils.constants import BASE, PAGE_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -44,26 +45,17 @@ class AlbumIncrementalSpider(BaseAlbumSpider):
 
     # ── 入口 ─────────────────────────────────────────
 
-    def start_requests(self):
-        url = f"{API_DISCS}?l=0&r={PAGE_SIZE}&sort=ad&type=album"
-        yield scrapy.Request(
-            url,
-            callback=self.parse_disc_list,
-            meta={"page_start": 0},
-            dont_filter=True,
-        )
+    async def start(self):
+        yield self.make_disc_request(0, self.parse_disc_list, meta={"page_start": 0})
 
     # ── 翻页处理 ─────────────────────────────────────
 
     def parse_disc_list(self, response):
-        if not check_response_ok(response):
-            return
-        data = safe_json_load(response)
-        if data is None:
-            return
+        discs = self._parse_discs_response(response)
         page_start = response.meta["page_start"]
-        discs = data.get("discs", [])
 
+        if discs is None:
+            return
         if not discs:
             self.logger.info("API 返回 0 条数据，翻页结束")
             raise CloseSpider("数据源已耗尽")
@@ -88,10 +80,4 @@ class AlbumIncrementalSpider(BaseAlbumSpider):
             )
 
         next_start = page_start + PAGE_SIZE
-        next_r = next_start + PAGE_SIZE
-        yield scrapy.Request(
-            f"{API_DISCS}?l={next_start}&r={next_r}&sort=ad&type=album",
-            callback=self.parse_disc_list,
-            meta={"page_start": next_start},
-            dont_filter=True,
-        )
+        yield self.make_disc_request(next_start, self.parse_disc_list, meta={"page_start": next_start})

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.indietracks.backend.mapper.TagMapper">
+
+    <select id="selectTopTags" resultType="com.indietracks.backend.entity.Tag">
+        SELECT t.tag_id, t.name
+        FROM tags t
+        JOIN album_tags at ON t.tag_id = at.tag_id
+        GROUP BY t.tag_id, t.name
+        ORDER BY COUNT(*) DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

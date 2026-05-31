@@ -1,4 +1,6 @@
-"""Scrapy settings — 从 config JSON 动态加载。"""
+"""Scrapy settings — 延迟加载 config JSON，支持测试注入。"""
+
+from __future__ import annotations
 
 import sys
 from pathlib import Path
@@ -6,20 +8,58 @@ from pathlib import Path
 # 确保 crawler/ 在路径中，以便 import indietracks_spider.*
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from indietracks_spider.utils.config_loader import get_delay_config
-
 BOT_NAME = "indietracks_spider"
 SPIDER_MODULES = ["indietracks_spider.spiders"]
 NEWSPIDER_MODULE = "indietracks_spider.spiders"
 
-# ── 延迟策略（从 config/delay.json 读取） ──────────────────
-_delay = get_delay_config()
+# ── 延迟策略（延迟加载，支持测试注入）─────────────────────
 
-DOWNLOAD_DELAY = _delay["download_delay"]
-CONCURRENT_REQUESTS_PER_DOMAIN = _delay["concurrent_requests_per_domain"]
+def _get_delay():
+    """延迟加载 delay config，避免 import 时读文件。"""
+    from indietracks_spider.utils.config_loader import get_delay_config
+    return get_delay_config()
+
+
+def _lazy_setting(key: str, default=None):
+    """延迟读取配置项。"""
+    return _get_delay().get(key, default)
+
+
+# 使用 property-style 延迟加载
+DOWNLOAD_DELAY = property(lambda self: _lazy_setting("download_delay"))
+CONCURRENT_REQUESTS_PER_DOMAIN = property(lambda self: _lazy_setting("concurrent_requests_per_domain"))
+
+# 直接赋值（Scrapy settings 需要非 descriptor 值）
+# 通过 from_crawler 或 spider custom_settings 覆盖
+_delay_cache = None
+
+def _ensure_delay():
+    global _delay_cache
+    if _delay_cache is None:
+        _delay_cache = _get_delay()
+    return _delay_cache
+
+
+class _LazySettings:
+    """让 DOWNLOAD_DELAY 等在首次访问时才读配置。"""
+
+    def __init__(self):
+        self._cache = {}
+
+    def __getitem__(self, key):
+        if key not in self._cache:
+            from indietracks_spider.utils.config_loader import get_delay_config
+            cfg = get_delay_config()
+            self._cache = cfg
+        return self._cache.get(key)
+
+
+# Scrapy 要求模块级变量，先给默认值，spider custom_settings 覆盖
+DOWNLOAD_DELAY = 3
+CONCURRENT_REQUESTS_PER_DOMAIN = 1
 
 # ── 基础反爬 ──────────────────────────────────────────────
-ROBOTSTXT_OBEY = False  # dizzylab robots.txt 禁用 /*?* 导致 API 全被封
+ROBOTSTXT_OBEY = False
 COOKIES_ENABLED = False
 
 DEFAULT_REQUEST_HEADERS = {

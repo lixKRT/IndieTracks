@@ -3,22 +3,25 @@
   <div class="comment-section">
     <h3 class="comment-title">评论 ({{ total }})</h3>
 
+    <!-- 发表评论（移到标题下方） -->
+    <div class="comment-form" v-if="isLoggedIn">
+      <textarea v-model="newComment" placeholder="写下你的想法..." rows="2" class="comment-textarea"></textarea>
+      <button class="comment-submit" @click="submitComment" :disabled="!newComment.trim()">发表评论</button>
+    </div>
+    <p v-else class="login-hint">登录后可以发表评论</p>
+
     <div v-if="comments.length === 0" class="comment-empty">暂无评论</div>
 
-    <div class="comment-list" ref="commentList">
-      <CommentItem v-for="c in comments" :key="c.comment_id" :comment="c" />
-    </div>
-
-    <button
-      v-if="comments.length < total"
-      class="comment-load-more"
-      @click="$emit('load-more')"
-      :disabled="loading"
-    >{{ loading ? '加载中...' : '加载更多' }}</button>
-
-    <div class="comment-form" v-if="showForm">
-      <textarea v-model="newComment" placeholder="写下你的想法..." rows="3" class="comment-textarea"></textarea>
-      <button class="comment-submit" @click="submitComment" :disabled="!newComment.trim()">发表评论</button>
+    <div class="comment-list" ref="commentList" @scroll="handleScroll">
+      <CommentItem
+        v-for="c in comments"
+        :key="c.comment_id"
+        :comment="c"
+        :can-edit="userId === c.user_id"
+        @edit="handleEdit"
+        @delete="handleDelete"
+      />
+      <div v-if="loading" class="loading-hint">加载中...</div>
     </div>
   </div>
 </template>
@@ -33,9 +36,10 @@ export default {
     comments: { type: Array, default: () => [] },
     total: { type: Number, default: 0 },
     loading: { type: Boolean, default: false },
-    showForm: { type: Boolean, default: true }
+    isLoggedIn: { type: Boolean, default: false },
+    userId: { type: Number, default: null }
   },
-  emits: ['add-comment', 'load-more'],
+  emits: ['load-more', 'add-comment', 'edit-comment', 'delete-comment'],
   data() {
     return { newComment: '' };
   },
@@ -44,6 +48,22 @@ export default {
       if (!this.newComment.trim()) return;
       this.$emit('add-comment', this.newComment.trim());
       this.newComment = '';
+    },
+    handleEdit(comment) {
+      this.$emit('edit-comment', comment);
+    },
+    handleDelete(commentId) {
+      this.$emit('delete-comment', commentId);
+    },
+    handleScroll() {
+      const el = this.$refs.commentList;
+      if (!el || this.loading) return;
+      // 滚动到底部附近时触发加载
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
+        if (this.comments.length < this.total) {
+          this.$emit('load-more');
+        }
+      }
     }
   }
 };
@@ -51,14 +71,22 @@ export default {
 
 <style scoped>
 .comment-section {
-  margin-top: var(--spacing-xl);
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
 }
-.comment-title { font-size: 1.1rem; color: var(--color-text-primary); margin-bottom: var(--spacing-md); }
-.comment-empty { color: var(--color-text-dim); padding: var(--spacing-xl) 0; text-align: center; }
+.comment-title { font-size: 1.1rem; color: var(--color-text-primary); margin-bottom: var(--spacing-sm); }
+.comment-empty { color: var(--color-text-dim); padding: var(--spacing-lg) 0; text-align: center; font-size: 0.85rem; }
+
+.comment-form { display: flex; flex-direction: column; gap: var(--spacing-xs); margin-bottom: var(--spacing-sm); }
+.comment-textarea { background: var(--color-bg-tertiary); border: 1px solid var(--color-border-light); color: var(--color-text-primary); font-size: 0.85rem; padding: 0.4rem; resize: none; font-family: inherit; }
+.comment-textarea:focus { outline: none; border-color: var(--color-accent); }
+.comment-submit { align-self: flex-end; background: var(--color-accent); color: var(--color-text-primary); border: none; padding: 0.3rem 1rem; font-size: 0.8rem; cursor: pointer; transition: background var(--transition-fast); }
+.comment-submit:hover:not(:disabled) { background: var(--color-accent-hover); }
+.comment-submit:disabled { opacity: 0.4; cursor: default; }
+
+.login-hint { color: var(--color-text-dim); font-size: 0.8rem; margin-bottom: var(--spacing-sm); }
 
 .comment-list {
   flex: 1;
@@ -71,31 +99,5 @@ export default {
 .comment-list::-webkit-scrollbar-track { background: transparent; }
 .comment-list::-webkit-scrollbar-thumb { background: var(--color-border); }
 
-.comment-load-more {
-  display: block;
-  width: 100%;
-  margin-top: var(--spacing-sm);
-  padding: 0.5rem;
-  background: none;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-.comment-load-more:hover:not(:disabled) {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-.comment-load-more:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.comment-form { margin-top: var(--spacing-lg); display: flex; flex-direction: column; gap: var(--spacing-sm); }
-.comment-textarea { background: var(--color-bg-tertiary); border: 1px solid var(--color-border-light); color: var(--color-text-primary); font-size: 0.9rem; padding: var(--spacing-sm); resize: vertical; font-family: inherit; }
-.comment-textarea:focus { outline: none; border-color: var(--color-accent); }
-.comment-submit { align-self: flex-end; background: var(--color-accent); color: var(--color-text-primary); border: none; padding: 0.5rem 1.5rem; font-size: 0.85rem; cursor: pointer; transition: background var(--transition-fast); }
-.comment-submit:hover:not(:disabled) { background: var(--color-accent-hover); }
-.comment-submit:disabled { opacity: 0.4; cursor: default; }
+.loading-hint { text-align: center; color: var(--color-text-dim); font-size: 0.8rem; padding: var(--spacing-sm) 0; }
 </style>

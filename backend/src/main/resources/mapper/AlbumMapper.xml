@@ -120,6 +120,7 @@
     <select id="selectCommentsByAlbumId" resultType="com.indietracks.backend.dto.AlbumDetail$CommentInfo">
         SELECT
             cm.comment_id,
+            cm.user_id,
             u.username,
             u.avatar_url,
             cm.content,
@@ -127,13 +128,14 @@
         FROM comments cm
         LEFT JOIN users u ON cm.user_id = u.user_id
         WHERE cm.album_id = #{album_id}
-        ORDER BY cm.created_at DESC
+        ORDER BY cm.comment_id DESC
     </select>
 
     <!-- 专辑评论（分页） -->
     <select id="selectCommentsPage" resultType="com.indietracks.backend.dto.AlbumDetail$CommentInfo">
         SELECT
             cm.comment_id,
+            cm.user_id,
             u.username,
             u.avatar_url,
             cm.content,
@@ -141,7 +143,7 @@
         FROM comments cm
         LEFT JOIN users u ON cm.user_id = u.user_id
         WHERE cm.album_id = #{album_id}
-        ORDER BY cm.created_at DESC
+        ORDER BY cm.comment_id DESC
         LIMIT #{limit} OFFSET #{offset}
     </select>
 

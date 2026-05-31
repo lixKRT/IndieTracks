@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.indietracks.backend.mapper.UserFollowMapper">
+
+    <insert id="insertFollow">
+        INSERT INTO user_follows (user_id, followed_user_id) VALUES (#{user_id}, #{followed_user_id})
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <delete id="deleteFollow">
+        DELETE FROM user_follows WHERE user_id = #{user_id} AND followed_user_id = #{followed_user_id}
+    </delete>
+
+    <select id="countFollow" resultType="int">
+        SELECT COUNT(*) FROM user_follows WHERE user_id = #{user_id} AND followed_user_id = #{followed_user_id}
+    </select>
+
+    <select id="selectFollowedUsers" resultType="com.indietracks.backend.dto.UserDTO">
+        SELECT u.user_id, u.username, u.avatar_url, u.user_role,
+               c.name AS circle_name
+        FROM user_follows uf
+        JOIN users u ON uf.followed_user_id = u.user_id
+        LEFT JOIN LATERAL (
+            SELECT c2.name
+            FROM user_circles uc
+            JOIN circles c2 ON uc.circle_id = c2.circle_id
+            WHERE uc.user_id = u.user_id
+            LIMIT 1
+        ) c ON true
+        WHERE uf.user_id = #{user_id}
+        ORDER BY uf.created_at DESC
+    </select>
+
+</mapper>

@@ -1,9 +1,6 @@
 <template>
   <div class="label-detail container-wide">
-    <div v-if="loading" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>加载中...</p>
-    </div>
+    <LoadingSpinner v-if="loading" />
 
     <template v-else-if="circle">
       <!-- 社团头部 Hero -->
@@ -18,13 +15,18 @@
             <div class="detail-stats">
               <span><i class="fas fa-compact-disc"></i> {{ circle.albums.length }} 张专辑</span>
               <span><i class="fas fa-user-friends"></i> {{ circle.members.length }} 名成员</span>
+              <button
+                class="follow-btn"
+                :class="{ followed: isFollowed }"
+                @click="toggleFollow"
+              >{{ isFollowed ? '已关注' : '关注社团' }}</button>
             </div>
             <div class="circle-tags" v-if="circle.representative_tags && circle.representative_tags.length">
               <span
                 v-for="tag in circle.representative_tags"
                 :key="tag"
                 class="tag"
-                @click.stop="$router.push({ path: '/tag', query: { tag } })"
+                @click.stop="goToTag(tag)"
               >#{{ tag }}</span>
             </div>
           </div>
@@ -37,7 +39,7 @@
           <i class="fas fa-users"></i> 成员
         </h2>
         <div class="member-list">
-          <div v-for="m in circle.members" :key="m.user_id" class="member-item">
+          <div v-for="m in circle.members" :key="m.user_id" class="member-item" @click="goToUser(m)">
             <img :src="m.avatar_url" :alt="m.username" class="member-avatar">
             <div class="member-info">
               <span class="member-name">{{ m.username }}</span>
@@ -56,10 +58,12 @@
             v-for="album in enhancedAlbums"
             :key="album.album_id"
             :album="album"
+            :is-favorited="favorite.isFavorite(album.album_id)"
             @album-click="goToAlbum"
-            @circle-click="goToCircleFromAlbum"
+            @circle-click="goToCircle"
             @tag-click="goToTag"
             @preview="handlePreview"
+            @toggle-favorite="handleToggleFavorite"
           />
         </div>
       </section>
@@ -68,23 +72,35 @@
 </template>
 
 <script>
-import { fetchCircle, fetchAlbum } from '../api';
-import { usePlayerStore } from '../stores/player.js';
+import { fetchCircle, checkCircleFollow, followCircle, unfollowCircle } from '../api';
+import { useFavoriteStore } from '../stores/favorite.js';
+import { useUserStore } from '../stores/user.js';
+import { useNavigation } from '../composables/navigation.js';
+import { useAuthGuard } from '../composables/authGuard.js';
+import { usePreviewPlay } from '../composables/previewPlay.js';
 import AlbumCard from '../components/molecules/AlbumCard.vue';
+import LoadingSpinner from '../components/atoms/LoadingSpinner.vue';
 
 export default {
   name: 'LabelDetailView',
-  components: { AlbumCard },
+  components: { AlbumCard, LoadingSpinner },
   data() {
-    return { circle: null, loading: true };
+    return { circle: null, loading: true, isFollowed: false };
+  },
+  setup() {
+    const userStore = useUserStore();
+    const favorite = useFavoriteStore();
+    const { goToAlbum, goToCircle, goToTag, goToUser } = useNavigation();
+    const { guard } = useAuthGuard();
+    const { addPreview } = usePreviewPlay();
+    return { userStore, favorite, goToAlbum, goToCircle, goToTag, goToUser, guard, addPreview };
   },
   computed: {
-    // 为每个专辑添加 circle_logo_url 字段，以匹配 AlbumCard 所需的数据结构
     enhancedAlbums() {
       if (!this.circle) return [];
       return this.circle.albums.map(album => ({
         ...album,
-        circle_logo_url: this.circle.logo_url  // 补充社团Logo
+        circle_logo_url: this.circle.logo_url
       }));
     }
   },
@@ -92,6 +108,12 @@ export default {
     try {
       const id = this.$route.params.id;
       this.circle = await fetchCircle(id);
+      if (this.userStore.isLoggedIn) {
+        try {
+          const data = await checkCircleFollow(id);
+          this.isFollowed = data.followed;
+        } catch { /* ignore */ }
+      }
     } catch (e) {
       console.error('加载社团详情失败:', e);
     } finally {
@@ -99,23 +121,26 @@ export default {
     }
   },
   methods: {
-    goToAlbum(album) {
-      this.$router.push(`/album/${album.album_id}`);
-    },
-    goToCircleFromAlbum(album) {
-      this.$router.push(`/label/${album.circle_id}`);
-    },
-    goToTag(tag) {
-      this.$router.push({ path: '/tag', query: { tag } });
+    async toggleFollow() {
+      await this.guard(async () => {
+        const id = this.$route.params.id;
+        if (this.isFollowed) {
+          await unfollowCircle(id);
+          this.isFollowed = false;
+        } else {
+          await followCircle(id);
+          this.isFollowed = true;
+        }
+      }, () => alert('请先登录'));
     },
     async handlePreview(album) {
-      try {
-        const detail = await fetchAlbum(album.album_id);
-        const player = usePlayerStore();
-        player.addAlbumTracks(detail.tracks, 0);
-      } catch (e) {
-        console.error('加载专辑曲目失败:', e);
-      }
+      await this.addPreview(album.album_id);
+    },
+    handleToggleFavorite(album) {
+      this.guard(
+        () => this.favorite.toggleFavorite(album.album_id),
+        () => alert('请先登录')
+      );
     }
   }
 };
@@ -127,7 +152,6 @@ export default {
   padding-bottom: var(--spacing-2xl);
 }
 
-/* Hero 区域 */
 .detail-hero {
   background: linear-gradient(135deg, rgba(20,20,20,0.9) 0%, rgba(10,10,10,0.95) 100%);
   border: 1px solid var(--color-border);
@@ -183,9 +207,25 @@ export default {
 
 .detail-stats {
   display: flex;
+  align-items: center;
   gap: var(--spacing-lg);
   font-size: 0.85rem;
   color: var(--color-text-dim);
+}
+
+.follow-btn {
+  padding: 0.4rem 1.2rem;
+  background: var(--color-accent);
+  color: var(--color-text-primary);
+  border: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.follow-btn.followed {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
 }
 
 .detail-stats i {
@@ -214,7 +254,6 @@ export default {
   background: rgba(255, 107, 107, 0.2);
 }
 
-/* 公用 section */
 .detail-section {
   margin-top: var(--spacing-xl);
 }
@@ -233,7 +272,6 @@ export default {
   color: var(--color-accent);
 }
 
-/* 成员列表 */
 .member-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -248,6 +286,7 @@ export default {
   padding: var(--spacing-sm) var(--spacing-md);
   border: 1px solid var(--color-border);
   transition: background 0.2s, border-color 0.2s;
+  cursor: pointer;
 }
 
 .member-item:hover {

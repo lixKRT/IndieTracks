@@ -4,10 +4,12 @@
 供 circle.py 爬虫和 album_base.py 复用。
 """
 
+from __future__ import annotations
+
 import logging
 
 from indietracks_spider.items import UserItem, UserCircleItem
-from indietracks_spider.utils.minio import download_image
+from indietracks_spider.utils.storage import get_storage_backend
 from indietracks_spider.utils.parsing import extract_user_id
 
 logger = logging.getLogger(__name__)
@@ -22,20 +24,17 @@ def extract_circle_info(response):
     logo_url = response.xpath(
         "//img[@id='imgsrc0' or contains(@data-src,'label_cover')]/@data-src"
     ).get("")
-    logo_key = download_image(logo_url) if logo_url else None
+    storage = get_storage_backend()
+    logo_key = storage.upload_image(logo_url) if logo_url else None
     return description, logo_key
 
 
 def yield_circle_members(response, labelid: int):
-    """解析社团成员列表，yield UserItem + UserCircleItem。
-
-    Returns: member_count
-    """
+    """解析社团成员列表，yield UserItem + UserCircleItem。"""
     member_as = response.xpath(
         "//p[text()='成员']/following-sibling::div//a[contains(@href,'/u/')]"
     )
 
-    found = 0
     for a in member_as:
         href = a.xpath("./@href").get("")
         uid = extract_user_id(href)
@@ -61,6 +60,3 @@ def yield_circle_members(response, labelid: int):
             uc["_dizzylab_user_id"] = uid
             uc["_dizzylab_labelid"] = labelid
             yield uc
-            found += 1
-
-    return found

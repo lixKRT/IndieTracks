@@ -46,6 +46,7 @@ public class AlbumDetail {
     @Data
     public static class CommentInfo {
         private Integer comment_id;
+        private Integer user_id;
         private String username;
         private String avatar_url;
         private String content;

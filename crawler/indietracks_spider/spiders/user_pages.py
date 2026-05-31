@@ -9,6 +9,8 @@ user_pages — 用户维页面爬虫
     scrapy crawl user_pages -a user_ids=2,3,5      # 指定用户
 """
 
+from __future__ import annotations
+
 import logging
 import re
 from datetime import datetime, timedelta, timezone
@@ -16,6 +18,7 @@ from urllib.parse import unquote
 
 import scrapy
 
+from indietracks_spider.db_mixin import DbSpiderMixin
 from indietracks_spider.items import (
     FavoriteItem,
     OwnedAlbumItem,
@@ -26,9 +29,8 @@ from indietracks_spider.utils.config_loader import (
     get_spider_config,
 )
 from indietracks_spider.utils.constants import BASE
-from indietracks_spider.utils.db import get_connection, close_connection
 from indietracks_spider.utils.parsing import check_response_ok
-from indietracks_spider.utils.minio import download_image
+from indietracks_spider.utils.storage import get_storage_backend
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ logger = logging.getLogger(__name__)
 PAGE_PARAM = {"music": "page", "likes": "dp", "following": "dp"}
 
 
-class UserPagesSpider(scrapy.Spider):
+class UserPagesSpider(DbSpiderMixin, scrapy.Spider):
     name = "user_pages"
 
     custom_settings = {
@@ -57,9 +59,6 @@ class UserPagesSpider(scrapy.Spider):
             int(x.strip()) for x in raw.split(",") if x.strip().isdigit()
         ] if raw else None
 
-        self._db_conn = None
-        self._db_cur = None
-
         self._processed = 0
         self._skipped = 0
         self._processed_uids: set[int] = set()
@@ -74,96 +73,28 @@ class UserPagesSpider(scrapy.Spider):
             self._target_user_ids if self._target_user_ids else "DB读取",
         )
 
-    # ── DB ────────────────────────────────────────────
-
-    def _ensure_db(self):
-        if self._db_cur is not None:
-            return
-        self._db_conn, self._db_cur = get_connection()
-
     def _get_users(self):
         """从 DB 读取待处理用户列表。"""
         self._ensure_db()
-
+        users = self.repo.get_users_for_crawling(
+            target_ids=self._target_user_ids,
+            mode=self._mode,
+        )
         if self._target_user_ids:
-            placeholders = ",".join(["%s"] * len(self._target_user_ids))
-            self._db_cur.execute(
-                f"SELECT dizzylab_user_id, username FROM users WHERE dizzylab_user_id IN ({placeholders}) ORDER BY dizzylab_user_id",
-                tuple(self._target_user_ids),
-            )
-            users = self._db_cur.fetchall()
             self.logger.info("指定用户 %d 人，实际找到 %d 人", len(self._target_user_ids), len(users))
         else:
-            cutoff = datetime.now(timezone.utc) - timedelta(days=30)
-            if self._mode == "incremental":
-                self._db_cur.execute(
-                    """SELECT dizzylab_user_id, username FROM users
-                       WHERE userpage_crawled_at IS NULL
-                          OR userpage_crawled_at < %s
-                       ORDER BY dizzylab_user_id""",
-                    (cutoff,),
-                )
-            else:
-                self._db_cur.execute(
-                    "SELECT dizzylab_user_id, username FROM users ORDER BY dizzylab_user_id"
-                )
-            users = self._db_cur.fetchall()
             self.logger.info("从 DB 读取到 %d 个用户", len(users))
-
         return users
-
-    def _resolve_album_id(self, dizzylab_id: str, title: str | None = None) -> int | None:
-        """查找或创建 album 占位行，返回 album_id。"""
-        self._ensure_db()
-        self._db_cur.execute(
-            "SELECT album_id FROM albums WHERE dizzylab_id = %s",
-            (dizzylab_id,),
-        )
-        row = self._db_cur.fetchone()
-        if row:
-            return row[0]
-        self._db_cur.execute(
-            """INSERT INTO albums (dizzylab_id, title) VALUES (%s, %s)
-               ON CONFLICT (dizzylab_id) DO NOTHING
-               RETURNING album_id""",
-            (dizzylab_id, title or dizzylab_id),
-        )
-        row = self._db_cur.fetchone()
-        return row[0] if row else None
-
-    def _resolve_circle_id(self, name: str) -> int | None:
-        """根据社团名查找 circle_id。"""
-        self._ensure_db()
-        self._db_cur.execute(
-            "SELECT circle_id FROM circles WHERE name = %s",
-            (name,),
-        )
-        row = self._db_cur.fetchone()
-        return row[0] if row else None
-
-    def _resolve_user_db_id(self, dizzylab_user_id: int) -> int | None:
-        """查找 user_id（db 主键）。"""
-        self._ensure_db()
-        self._db_cur.execute(
-            "SELECT user_id FROM users WHERE dizzylab_user_id = %s",
-            (dizzylab_user_id,),
-        )
-        row = self._db_cur.fetchone()
-        return row[0] if row else None
-
-    def _mark_user_crawled(self, dizzylab_user_id: int):
-        self._ensure_db()
-        self._db_cur.execute(
-            "UPDATE users SET userpage_crawled_at = %s WHERE dizzylab_user_id = %s",
-            (datetime.now(timezone.utc), dizzylab_user_id),
-        )
 
     def closed(self, reason):
         # 标记所有已处理的用户
-        for uid in self._processed_uids:
-            self._mark_user_crawled(uid)
+        try:
+            for uid in self._processed_uids:
+                self.repo.mark_user_crawled(uid)
+        except Exception:
+            self.logger.error("标记用户爬取时间失败", exc_info=True)
 
-        close_connection(self._db_conn, self._db_cur)
+        super().closed(reason)
         self.logger.info(
             "user_pages 结束 | processed=%d | skipped=%d | reason=%s",
             self._processed,
@@ -173,7 +104,8 @@ class UserPagesSpider(scrapy.Spider):
 
     # ── 入口 ──────────────────────────────────────────
 
-    def start_requests(self):
+    async def start(self):
+        self._ensure_db()
         users = self._get_users()
         limit = self._max_users if self._max_users > 0 else None
 
@@ -185,17 +117,10 @@ class UserPagesSpider(scrapy.Spider):
             # incremental 模式下，查页面是否已存在数据
             if self._mode == "incremental":
                 self._ensure_db()
-                self._db_cur.execute(
-                    "SELECT userpage_crawled_at FROM users WHERE dizzylab_user_id = %s",
-                    (dizzylab_uid,),
-                )
-                row = self._db_cur.fetchone()
-                if row and row[0]:
-                    age = datetime.now(timezone.utc) - row[0].replace(tzinfo=timezone.utc)
-                    if age.days < 30:
-                        self._skipped += 1
-                        self.logger.info("[跳过: %d] %s (uid=%d) 30天内已爬", self._skipped, username, dizzylab_uid)
-                        continue
+                if self.repo.is_user_page_fresh(dizzylab_uid, days=30):
+                    self._skipped += 1
+                    self.logger.info("[跳过: %d] %s (uid=%d) 30天内已爬", self._skipped, username, dizzylab_uid)
+                    continue
 
             self._processed += 1
             self.logger.info(
@@ -207,7 +132,7 @@ class UserPagesSpider(scrapy.Spider):
                 self._skipped,
             )
 
-            meta = {"_dizzylab_user_id": dizzylab_uid, "_username": username}
+            meta = {"_dizzylab_user_id": dizzylab_uid}
             self._processed_uids.add(dizzylab_uid)
 
             # 三种页面的首页
@@ -248,17 +173,13 @@ class UserPagesSpider(scrapy.Spider):
 
     def _download_user_avatar(self, response, dizzylab_uid: int):
         """从用户页面提取并下载头像。"""
-        # 用户头像通常在页面顶部的 img 标签中
+        storage = get_storage_backend()
         avatar_url = response.xpath("//img[contains(@src,'avatars')]/@src").get("")
         if avatar_url:
-            avatar_key = download_image(avatar_url)
+            avatar_key = storage.upload_image(avatar_url)
             if avatar_key:
-                # 更新用户头像
                 self._ensure_db()
-                self._db_cur.execute(
-                    "UPDATE users SET avatar_url = %s WHERE dizzylab_user_id = %s",
-                    (avatar_key, dizzylab_uid),
-                )
+                self.repo.update_user_avatar(dizzylab_uid, avatar_key)
                 self.logger.info("  用户 %d 头像已上传: %s", dizzylab_uid, avatar_key)
 
     # ── Music：已购专辑 ───────────────────────────────
@@ -268,7 +189,8 @@ class UserPagesSpider(scrapy.Spider):
             return
         dizzylab_uid = response.meta["_dizzylab_user_id"]
         current_page = response.meta["_page"]
-        user_db_id = self._resolve_user_db_id(dizzylab_uid)
+        self._ensure_db()
+        user_db_id = self.repo.resolve_user_db_id(dizzylab_uid)
 
         if not user_db_id:
             self.logger.warning("用户 %d 不在 DB 中，跳过 music 解析", dizzylab_uid)
@@ -279,8 +201,9 @@ class UserPagesSpider(scrapy.Spider):
             self._download_user_avatar(response, dizzylab_uid)
 
         for slug, title in self._parse_album_cards(response):
-            album_id = self._resolve_album_id(slug, title)
+            album_id = self.repo.resolve_album_id(slug, title)
             if not album_id:
+                self.logger.warning("  专辑 %s 解析失败，跳过", slug)
                 continue
             oa = OwnedAlbumItem()
             oa["user_id"] = user_db_id
@@ -301,16 +224,18 @@ class UserPagesSpider(scrapy.Spider):
 
     def parse_likes(self, response):
         if not check_response_ok(response):
+            self.logger.warning("收藏页异常: %s", response.url)
             return
         dizzylab_uid = response.meta["_dizzylab_user_id"]
         current_dp = response.meta["_dp"]
-        user_db_id = self._resolve_user_db_id(dizzylab_uid)
+        self._ensure_db()
+        user_db_id = self.repo.resolve_user_db_id(dizzylab_uid)
 
         if not user_db_id:
             return
 
         for slug, title in self._parse_album_cards(response):
-            album_id = self._resolve_album_id(slug, title)
+            album_id = self.repo.resolve_album_id(slug, title)
             if not album_id:
                 continue
             fav = FavoriteItem()
@@ -332,16 +257,18 @@ class UserPagesSpider(scrapy.Spider):
 
     def parse_following(self, response):
         if not check_response_ok(response):
+            self.logger.warning("关注页异常: %s", response.url)
             return
         dizzylab_uid = response.meta["_dizzylab_user_id"]
         current_dp = response.meta["_dp"]
-        user_db_id = self._resolve_user_db_id(dizzylab_uid)
+        self._ensure_db()
+        user_db_id = self.repo.resolve_user_db_id(dizzylab_uid)
 
         if not user_db_id:
             return
 
         for name in self._parse_circle_names(response):
-            circle_id = self._resolve_circle_id(name)
+            circle_id = self.repo.resolve_circle_id_by_name(name)
             if not circle_id:
                 self.logger.info("  社团 '%s' 不在 circles 表中，跳过", name)
                 continue

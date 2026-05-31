@@ -32,7 +32,6 @@ class CircleItem(scrapy.Item):
     name = scrapy.Field()
     description = scrapy.Field()
     logo_url = scrapy.Field()
-    owner_user_id = scrapy.Field()       # 留空
 
 
 class AlbumCircleItem(scrapy.Item):
@@ -103,9 +102,3 @@ class CircleFollowItem(scrapy.Item):
     _dizzylab_labelid = scrapy.Field()    # 临时关联
 
 
-class UserFollowItem(scrapy.Item):
-    user_id = scrapy.Field()
-    followed_user_id = scrapy.Field()
-    created_at = scrapy.Field()
-    _dizzylab_user_id = scrapy.Field()            # 临时关联
-    _dizzylab_followed_user_id = scrapy.Field()   # 临时关联

@@ -1,6 +1,6 @@
-"""
-JSON 配置读取工具。
-"""
+"""JSON 配置读取工具（支持注入覆盖，便于测试）。"""
+
+from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -10,14 +10,29 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 CONFIG_DIR = PROJECT_ROOT / "config"
 
+# 可注入的配置覆盖（测试用）
+_overrides: dict[str, dict] = {}
+
 
 def load_json(filename: str) -> dict[str, Any]:
     """读取 config/ 目录下的 JSON 文件。"""
+    if filename in _overrides:
+        return _overrides[filename]
     path = CONFIG_DIR / filename
     if not path.exists():
         raise FileNotFoundError(f"配置文件不存在: {path}")
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def set_config_override(filename: str, data: dict) -> None:
+    """注入配置覆盖（测试用）。"""
+    _overrides[filename] = data
+
+
+def clear_config_overrides() -> None:
+    """清除所有配置覆盖（测试用 teardown）。"""
+    _overrides.clear()
 
 
 def get_delay_config() -> dict[str, Any]:

@@ -8,8 +8,9 @@ album_bulk — 批量爬虫
     scrapy crawl album_bulk
 """
 
+from __future__ import annotations
+
 import logging
-import random
 
 import scrapy
 from scrapy.exceptions import DontCloseSpider
@@ -20,8 +21,8 @@ from indietracks_spider.utils.config_loader import (
     get_delay_config,
     get_spider_config,
 )
-from indietracks_spider.utils.constants import BASE, API_DISCS, PAGE_SIZE
-from indietracks_spider.utils.parsing import safe_json_load, check_response_ok
+from indietracks_spider.utils.constants import BASE, PAGE_SIZE
+from indietracks_spider.utils.delay import schedule_album_delay
 
 logger = logging.getLogger(__name__)
 
@@ -45,12 +46,13 @@ class AlbumBulkSpider(BaseAlbumSpider):
         self._processed = 0
         self._skipped = 0
 
-        # 队列驱动：不在 parse_disc_list 中直接 yield 请求
+        # 队列驱动
         self._pending_discs: list[dict] = []
-        self._next_page = 0       # 下一页 API 起始位置
-        self._fetching = False    # 是否正在等待 API 响应
-        self._started = False     # 是否已开始调度
-        self._delay_pending = False  # reactor.callLater 等待中
+        self._next_page = 0
+        self._fetching = False
+        self._started = False
+        self._delay_pending = False
+        self._just_fetched = False
 
         self.logger.info(
             "album_bulk 启动 | mode=%s | max_albums=%s | between=%d+rand(0,%d)s",
@@ -71,13 +73,24 @@ class AlbumBulkSpider(BaseAlbumSpider):
         if self._delay_pending or self._fetching:
             raise DontCloseSpider
         if self._pending_discs:
-            self._delay_pending = True
-            from twisted.internet import reactor
-            wait = self._between_min + random.randint(0, self._between_random)
-            self.logger.info("专辑间延迟 %ds（min=%d + rand(%d)）", wait, self._between_min, self._between_random)
-            reactor.callLater(wait, self._on_delay_done)
+            if self._just_fetched:
+                self._just_fetched = False
+                self._process_next_disc()
+            else:
+                self._delay_pending = True
+                schedule_album_delay(self._between_min, self._between_random, self._on_delay_done)
             raise DontCloseSpider
-        # 无待处理工作，正常关闭
+        # 无待处理专辑，检查是否需要翻页
+        if self._max_albums == 0 or self._processed < self._max_albums:
+            self._fetching = True
+            self._just_fetched = True
+            next_start = self._next_page + PAGE_SIZE
+            self._next_page = next_start
+            self.logger.info("队列空，翻页 l=%d", next_start)
+            self.crawler.engine.crawl(
+                self.make_disc_request(next_start, self.parse_disc_list, meta={"page_start": next_start})
+            )
+            raise DontCloseSpider
 
     def closed(self, reason):
         super().closed(reason)
@@ -90,19 +103,13 @@ class AlbumBulkSpider(BaseAlbumSpider):
 
     # ── 入口 ─────────────────────────────────────────
 
-    def start_requests(self):
-        url = f"{API_DISCS}?l=0&r={PAGE_SIZE}&sort=ad&type=album"
-        yield scrapy.Request(
-            url,
-            callback=self.parse_disc_list,
-            meta={"page_start": 0},
-            dont_filter=True,
-        )
+    async def start(self):
+        yield self.make_disc_request(0, self.parse_disc_list, meta={"page_start": 0})
 
     # ── 调度核心 ─────────────────────────────────────
 
-    def _schedule_next(self):
-        """从待处理队列取出下一张专辑，注入引擎。队列空则获取下一页。"""
+    def _process_next_disc(self):
+        """从队列取出下一张专辑并注入引擎。"""
         if self._pending_discs:
             disc = self._pending_discs.pop(0)
             slug = disc["id"]
@@ -115,36 +122,15 @@ class AlbumBulkSpider(BaseAlbumSpider):
                     dont_filter=True,
                 ),
             )
-            return
-
-        # 队列空 —— 需要翻页？
-        if self._max_albums == 0 or self._processed < self._max_albums:
-            if self._fetching:
-                return  # 已经在等 API 返回
-            self._fetching = True
-            next_start = self._next_page + PAGE_SIZE
-            next_r = next_start + PAGE_SIZE
-            self._next_page = next_start
-            self.crawler.engine.crawl(
-                scrapy.Request(
-                    f"{API_DISCS}?l={next_start}&r={next_r}&sort=ad&type=album",
-                    callback=self.parse_disc_list,
-                    meta={"page_start": next_start},
-                    dont_filter=True,
-                ),
-            )
 
     # ── 翻页处理 ─────────────────────────────────────
 
     def parse_disc_list(self, response):
         self._fetching = False
-        if not check_response_ok(response):
-            return
-        data = safe_json_load(response)
-        if data is None:
+        discs = self._parse_discs_response(response)
+        if discs is None:
             return
         page_start = response.meta["page_start"]
-        discs = data.get("discs", [])
 
         if not discs:
             self.logger.info("API 返回 0 条数据，翻页结束")
@@ -162,7 +148,7 @@ class AlbumBulkSpider(BaseAlbumSpider):
             slug = disc["id"]
             complete = self._album_is_complete(slug)
 
-            if self._mode == "incremental" and complete:
+            if complete:
                 self._skipped += 1
                 self.logger.info(
                     "[%s] 跳过 | 数据完整 | 累计跳过: %d",
@@ -186,12 +172,11 @@ class AlbumBulkSpider(BaseAlbumSpider):
             )
             self._pending_discs.append(disc)
 
-        # 增量模式：整页全跳过则停止
+        # 增量模式：整页全跳过则继续翻下一页
         if self._mode == "incremental" and page_processed == 0:
-            self.logger.info("增量模式：本页无待处理专辑，翻页结束")
-            return
+            self.logger.info("增量模式：本页无待处理专辑，翻下一页")
 
-        # 首次触发：直接 yield 第一张（确保在回调链内）
+        # 首次触发：直接 yield 第一张
         if not self._started:
             self._started = True
             if self._pending_discs:
@@ -205,12 +190,9 @@ class AlbumBulkSpider(BaseAlbumSpider):
                     dont_filter=True,
                 )
 
-    # ── 专辑间延迟（不阻塞 reactor） ──────────────────
-
-    # _after_album_detail 不再需要——延迟由 _spider_idle 管理
-    # 保留空实现以兼容 BaseAlbumSpider
+    # ── 专辑间延迟 ──────────────────────────────────
 
     def _on_delay_done(self):
         """延迟结束，调度下一张专辑。"""
         self._delay_pending = False
-        self._schedule_next()
+        self._process_next_disc()

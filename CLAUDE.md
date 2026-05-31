@@ -11,8 +11,9 @@ IndieTracks is an indie music showcase and preview platform (reference: dizzylab
 ## Tech Stack
 
 - **Frontend**: Vue 3 + Vite 8 + Vue Router 4 + Pinia + Axios
-- **Backend**: Spring Boot 4 + Java 25 + MyBatis-Plus + Undertow (replaces Tomcat)
-- **Data**: PostgreSQL 18 + MinIO object storage (presigned URLs)
+- **Backend**: Spring Boot 4 + Java 25 + MyBatis-Plus + Jetty + Spring Security
+- **Data**: PostgreSQL 18 + MinIO object storage (anonymous access)
+- **Auth**: HttpOnly Cookie + JWT, BCrypt password encryption
 - **Crawler**: Scrapy (Python 3.13) targeting dizzylab.net
 
 ## Commands
@@ -35,9 +36,11 @@ cd backend
 
 ### Crawler & Database
 ```bash
+python scripts/windows/setup-crawler.py      # 爬虫一键部署（新机器用这个）
 python scripts/windows/run-crawlers.py       # 爬虫启动器（一键）
 python scripts/windows/setup-database.py     # 建库建表
 python scripts/windows/setup-minio.py        # MinIO 部署
+cd crawler && python -m pytest tests/ -v     # 爬虫单元测试（195 个）
 ```
 
 ## Project Structure
@@ -69,9 +72,9 @@ IndieTracks/
 
 | Route | Phase |
 |-------|-------|
-| `/` Home | Mock Done |
-| `/album/:id` Detail | Mock Done |
-| `/labels` Circle list | Mock Done |
-| `/label/:id` Circle detail | Mock Done |
-| `/tag` Tag browse | Mock Done |
-| `/user/:id` User page | Later |
+| `/` Home | 联调完成 |
+| `/album/:id` Detail | 联调完成 |
+| `/labels` Circle list | 联调完成 |
+| `/label/:id` Circle detail | 联调完成 |
+| `/tag` Tag browse | 联调完成 |
+| `/user/:id` User page | 开发中 |

@@ -8,20 +8,22 @@ user_roles — 用户角色爬虫
     scrapy crawl user_roles
 """
 
+from __future__ import annotations
+
 import logging
 
 import scrapy
 from scrapy.exceptions import CloseSpider
 
+from indietracks_spider.db_mixin import DbSpiderMixin
 from indietracks_spider.utils.config_loader import get_spider_config
 from indietracks_spider.utils.constants import BASE
-from indietracks_spider.utils.db import get_connection, close_connection
 from indietracks_spider.utils.parsing import extract_user_id, check_response_ok
 
 logger = logging.getLogger(__name__)
 
 
-class UserRolesSpider(scrapy.Spider):
+class UserRolesSpider(DbSpiderMixin, scrapy.Spider):
     name = "user_roles"
 
     custom_settings = {
@@ -34,44 +36,28 @@ class UserRolesSpider(scrapy.Spider):
         spider_cfg = get_spider_config()
         self._mode = spider_cfg.get("mode", "full")
 
-        self._db_conn = None
-        self._db_cur = None
         self._staff_count = 0
         self._pro_count = 0
         self._skipped_count = 0
 
         self.logger.info("user_roles 启动 | mode=%s", self._mode)
 
-    def _ensure_db(self):
-        if self._db_cur is not None:
-            return
-        self._db_conn, self._db_cur = get_connection()
-
     def _update_role(self, dizzylab_user_id: int, role: str) -> bool:
         """更新用户角色。incremental 模式跳过已有 role 的用户。"""
         self._ensure_db()
 
         if self._mode == "incremental":
-            self._db_cur.execute(
-                "SELECT user_role FROM users WHERE dizzylab_user_id = %s",
-                (dizzylab_user_id,),
-            )
-            row = self._db_cur.fetchone()
-            if row and row[0] and row[0] != "normal":
+            wrote = self.repo.update_role_if_normal(dizzylab_user_id, role)
+            if not wrote:
                 self._skipped_count += 1
                 return False
-
-        self._db_cur.execute(
-            """INSERT INTO users (dizzylab_user_id, username, user_role)
-               VALUES (%s, %s, %s)
-               ON CONFLICT (dizzylab_user_id) DO UPDATE
-                 SET user_role = EXCLUDED.user_role""",
-            (dizzylab_user_id, f"user_{dizzylab_user_id}", role),
-        )
-        return True
+            return True
+        else:
+            self.repo.update_role(dizzylab_user_id, role)
+            return True
 
     def closed(self, reason):
-        close_connection(self._db_conn, self._db_cur)
+        super().closed(reason)
         self.logger.info(
             "user_roles 结束 | staff=%d | pro=%d | skipped=%d | mode=%s | reason=%s",
             self._staff_count,
@@ -83,7 +69,7 @@ class UserRolesSpider(scrapy.Spider):
 
     # ── 入口 ─────────────────────────────────────────
 
-    def start_requests(self):
+    async def start(self):
         yield scrapy.Request(
             f"{BASE}/setup",
             callback=self.parse_setup,
@@ -110,12 +96,17 @@ class UserRolesSpider(scrapy.Spider):
                     self._staff_count += 1
             self.logger.info("STAFF: 找到 %d 人，实际写入 %d", len(staff_links), self._staff_count)
 
-        # PRO 用户
+        # PRO 用户（到下一个 h2 为止，避免溢出到后续区域）
         pro_heading = response.xpath("//h2[contains(., 'PRO')]")
         if pro_heading:
-            pro_links = pro_heading[0].xpath(
-                "./following-sibling::a[contains(@href, '/u/')]"
-            )
+            # 取 PRO h2 之后的所有兄弟节点，遇到下一个 h2 就停
+            pro_links = []
+            for sibling in pro_heading[0].xpath("./following-sibling::*"):
+                tag = sibling.xpath("name()").get("")
+                if tag == "h2":
+                    break
+                if tag == "a" and "/u/" in (sibling.xpath("./@href").get("")):
+                    pro_links.append(sibling)
             for a in pro_links:
                 href = a.xpath("./@href").get("")
                 uid = extract_user_id(href)

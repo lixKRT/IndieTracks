@@ -55,6 +55,7 @@
 </template>
 
 <script>
+import { nextTick } from 'vue';
 import { usePlayerStore } from '../../stores/player.js';
 
 export default {
@@ -64,7 +65,8 @@ export default {
       currentTime: 0,
       duration: 0,
       dragFrom: -1,
-      seeking: false
+      seeking: false,
+      listenersAttached: false
     };
   },
   setup() {
@@ -89,28 +91,39 @@ export default {
       } else {
         audio.pause();
       }
+    },
+    // 当播放列表从空变为非空时，<audio> 元素首次渲染，需要挂载事件监听
+    'store.playlist_length'(newLen) {
+      if (newLen > 0 && !this.listenersAttached) {
+        nextTick(() => this.attachListeners());
+      }
     }
   },
   mounted() {
-    const audio = this.$refs.audio;
-    audio.addEventListener('timeupdate', () => {
-      if (!this.seeking) {
-        this.currentTime = audio.currentTime;
-      }
-    });
-    audio.addEventListener('loadedmetadata', () => {
-      this.duration = audio.duration;
-    });
-    audio.addEventListener('ended', () => {
-      this.store.next();
-    });
-    audio.addEventListener('error', () => {
-      console.warn('Audio load error, trying next track');
-    });
-
+    this.attachListeners();
     this.loadTrack();
   },
   methods: {
+    attachListeners() {
+      const audio = this.$refs.audio;
+      if (!audio || this.listenersAttached) return;
+      this.listenersAttached = true;
+
+      audio.addEventListener('timeupdate', () => {
+        if (!this.seeking) {
+          this.currentTime = audio.currentTime;
+        }
+      });
+      audio.addEventListener('loadedmetadata', () => {
+        this.duration = audio.duration;
+      });
+      audio.addEventListener('ended', () => {
+        this.store.next();
+      });
+      audio.addEventListener('error', () => {
+        console.warn('Audio load error, trying next track');
+      });
+    },
     loadTrack() {
       const audio = this.$refs.audio;
       const track = this.store.current_track;

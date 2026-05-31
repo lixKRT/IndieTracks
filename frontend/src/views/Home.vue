@@ -21,15 +21,17 @@
         :loading="loading"
         :loadingMore="loadingMore"
         :hasMore="albums.length < totalAlbums"
+        :favorited-ids="favorite.favoriteAlbumIds"
         @album-click="goToAlbum"
         @circle-click="goToCircle"
-        @tag-click="filterByTag"
+        @tag-click="goToTag"
         @preview="handlePreview"
+        @toggle-favorite="handleToggleFavorite"
         @load-more="loadMore"
       />
     </section>
 
-    <!-- 推荐社团横向滚动区（可选） -->
+    <!-- 推荐社团横向滚动区 -->
     <section class="featured-circles container-wide" v-if="featuredCircles.length">
       <div class="section-header">
         <div>
@@ -43,7 +45,7 @@
           v-for="circle in featuredCircles"
           :key="circle.circle_id"
           class="circle-card-horizontal"
-          @click="goToCircleDetail(circle)"
+          @click="goToCircleById(circle.circle_id)"
         >
           <div class="circle-avatar">
             <img :src="circle.logo_url" :alt="circle.name">
@@ -61,8 +63,12 @@
 <script>
 import AlbumGrid from '../components/organisms/AlbumGrid.vue';
 import HeroSection from '../components/organisms/HeroSection.vue';
-import { fetchAlbums, fetchCircles, fetchAlbum } from '../api';
+import { fetchAlbums, fetchCircles } from '../api';
 import { usePlayerStore } from '../stores/player.js';
+import { useFavoriteStore } from '../stores/favorite.js';
+import { useNavigation } from '../composables/navigation.js';
+import { useAuthGuard } from '../composables/authGuard.js';
+import { usePreviewPlay } from '../composables/previewPlay.js';
 
 export default {
   name: 'HomeView',
@@ -89,6 +95,15 @@ export default {
         { value: '100%', label: '免费试听' }
       ];
     }
+  },
+  setup() {
+    const player = usePlayerStore();
+    const favorite = useFavoriteStore();
+    const { goToAlbum, goToCircle, goToTag, goToCircleById } = useNavigation();
+    const { guard } = useAuthGuard();
+    const { addPreview } = usePreviewPlay();
+    return { player, favorite, goToAlbum, goToCircle, goToTag, goToCircleById, guard, addPreview };
+
   },
   async mounted() {
     await this.loadData();
@@ -119,7 +134,7 @@ export default {
       const step = (now) => {
         const elapsed = now - start;
         const progress = Math.min(elapsed / duration, 1);
-        const ease = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+        const ease = 1 - Math.pow(1 - progress, 3);
         this[field] = Math.round(ease * target);
         if (progress < 1) requestAnimationFrame(step);
       };
@@ -139,23 +154,14 @@ export default {
         this.loadingMore = false;
       }
     },
-    goToAlbum(album) {
-      this.$router.push(`/album/${album.album_id}`);
+    async handlePreview(album) {
+      await this.addPreview(album.album_id);
     },
-    goToCircle(album) {
-      this.$router.push(`/label/${album.circle_id}`);
-    },
-    goToCircleDetail(circle) {
-      this.$router.push(`/label/${circle.circle_id}`);
-    },
-    filterByTag(tag) {
-      this.$router.push({ path: '/tag', query: { tag } });
-    },
-    handlePreview(album) {
-      fetchAlbum(album.album_id).then(detail => {
-        const player = usePlayerStore();
-        player.addAlbumTracks(detail.tracks, 0);
-      });
+    async handleToggleFavorite(album) {
+      await this.guard(
+        () => this.favorite.toggleFavorite(album.album_id),
+        () => alert('请先登录')
+      );
     },
     scrollToLatest() {
       this.$refs.latestSection?.scrollIntoView({ behavior: 'smooth' });
@@ -169,7 +175,6 @@ export default {
   background: var(--color-bg-primary);
 }
 
-/* 公共区块样式 */
 .latest-section,
 .featured-circles {
   padding: 3rem 0;
@@ -213,7 +218,6 @@ export default {
   color: var(--color-accent);
 }
 
-/* 横向滚动社团卡片 */
 .circles-scroll {
   display: flex;
   gap: 1.5rem;
@@ -242,10 +246,6 @@ export default {
   transition: all 0.25s;
 }
 
-.circle-card-horizontal {
-  cursor: pointer;
-}
-
 .circle-avatar {
   width: 56px;
   height: 56px;
@@ -271,7 +271,6 @@ export default {
   color: var(--color-text-dim);
 }
 
-/* 响应式 */
 @media (max-width: 768px) {
   .section-title {
     font-size: 1.4rem;

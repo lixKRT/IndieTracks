@@ -3,10 +3,7 @@
     <main class="main">
       <div class="container">
         <!-- 加载状态 -->
-        <div v-if="loading" class="loading-container">
-          <div class="loading-spinner"></div>
-          <p>加载中...</p>
-        </div>
+        <LoadingSpinner v-if="loading" />
 
         <template v-else-if="album">
           <!-- 面包屑 / 返回 -->
@@ -35,7 +32,14 @@
                     <span><i class="fas fa-compact-disc"></i> {{ circleDetail.albums.length }} 张专辑</span>
                     <span><i class="fas fa-user-friends"></i> {{ circleDetail.members.length }} 名成员</span>
                   </div>
-                  <button class="circle-link-btn" @click.stop="goToCircle">查看社团 →</button>
+                  <div class="circle-card-actions">
+                    <button class="circle-link-btn" @click.stop="goToCircle">查看社团 →</button>
+                    <button
+                      class="circle-follow-btn"
+                      :class="{ followed: isCircleFollowed }"
+                      @click.stop="toggleCircleFollow"
+                    >{{ isCircleFollowed ? '已关注' : '关注社团' }}</button>
+                  </div>
                 </div>
               </div>
 
@@ -87,14 +91,14 @@
 
             <!-- ========== 右侧卡片区 ========== -->
             <div class="right">
-              <!-- 购买卡片 -->
+              <!-- 试听卡片 -->
               <div class="side-card buy-card">
                 <div class="price-row">
                   <span class="price-num" v-if="album.price > 0">¥ {{ album.price }}</span>
                   <span class="price-label free" v-else>免费下载</span>
                 </div>
                 <button class="buy-btn" @click="handleBuy">
-                  {{ album.price > 0 ? '立即购买' : '免费下载' }}
+                  {{ album.price > 0 ? '立即试听' : '免费试听' }}
                 </button>
                 <ul class="buy-info">
                   <li>全曲在线串流试听</li>
@@ -107,8 +111,12 @@
                   :comments="comments"
                   :total="commentsTotal"
                   :loading="commentsLoading"
-                  :show-form="false"
+                  :is-logged-in="userStore.isLoggedIn"
+                  :user-id="userStore.user?.user_id"
                   @load-more="loadMoreComments"
+                  @add-comment="handleAddComment"
+                  @edit-comment="handleEditComment"
+                  @delete-comment="handleDeleteComment"
                 />
               </div>
             </div>
@@ -140,74 +148,30 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { fetchAlbum, fetchAlbums, fetchCircle } from '../api'
+import { useRoute } from 'vue-router'
+import { fetchAlbum, fetchAlbums, fetchCircle, fetchComments, addComment, updateComment, deleteComment, checkCircleFollow, followCircle, unfollowCircle } from '../api'
 import { usePlayerStore } from '../stores/player.js'
 import { useFavoriteStore } from '../stores/favorite.js'
+import { useUserStore } from '../stores/user.js'
+import { useNavigation } from '../composables/navigation.js'
+import { useAuthGuard } from '../composables/authGuard.js'
+import { cleanText } from '../utils/text.js'
 import TrackList from '../components/organisms/TrackList.vue'
 import CommentSection from '../components/organisms/CommentSection.vue'
-
-// 清洗爬虫抓取的页面噪音
-const BOILERPLATE = [
-  '提供高品质MP3和无损FLAC格式下载',
-  '完整歌曲在线串流',
-  '包含实体物品',
-  '这个商品需要一个邮寄地址',
-  '购买完成后请添加主理人微信',
-  '喜欢《',
-  '您可以使用BOOST',
-  '您可以支付',
-  '购买',
-  '最少需要',
-  '元',
-  '在您购买这个商品之后',
-  '折扣码',
-  '兑换的商品无法使用折扣码',
-  '短评',
-  '和……相似的作品',
-  'OrganicNight',
-  '@dizzylab',
-  '收件人',
-  '手机号',
-  '收货地址',
-  '附言',
-  'BOOST',
-  '在声音中寻找本真',
-  '粤网文',
-  '节目制作经营许可证',
-  'Links',
-]
-
-function cleanText(text) {
-  if (!text) return ''
-  // 移除损坏的 Unicode 字符
-  let cleaned = text.replace(/[\udc00-\udfff]/g, '')
-  // 按行过滤
-  const lines = cleaned.split('\n').filter(line => {
-    const l = line.trim()
-    if (!l) return false
-    // 跳过纯数字行、百分比、日期行
-    if (/^\d+%$/.test(l)) return false
-    if (/^发布于?\d{4}年/.test(l)) return false
-    if (/^发布于/.test(l)) return false
-    // 跳过包含噪音关键词的行
-    for (const bp of BOILERPLATE) {
-      if (l.includes(bp)) return false
-    }
-    return true
-  })
-  return lines.join('\n').trim()
-}
+import LoadingSpinner from '../components/atoms/LoadingSpinner.vue'
 
 const route = useRoute()
-const router = useRouter()
 const player = usePlayerStore()
 const favorite = useFavoriteStore()
+const userStore = useUserStore()
+const { goToAlbum, goToCircle, goToTag } = useNavigation()
+const { guard: guardAsync } = useAuthGuard()
 
 const album = ref(null)
 const loading = ref(true)
 const recommendList = ref([])
 const circleDetail = ref(null)
+const isCircleFollowed = ref(false)
 const comments = ref([])
 const commentsTotal = ref(0)
 const commentsPage = ref(1)
@@ -216,10 +180,9 @@ const commentsLoading = ref(false)
 // 收藏状态
 const isFavorited = computed(() => album.value ? favorite.isFavorite(album.value.album_id) : false)
 
-function toggleFavorite() {
-  if (album.value) {
-    favorite.toggleFavorite(album.value.album_id)
-  }
+async function toggleFavorite() {
+  if (!album.value) return
+  await guardAsync(() => favorite.toggleFavorite(album.value.album_id), () => alert('请先登录'))
 }
 
 async function loadAlbum() {
@@ -227,22 +190,30 @@ async function loadAlbum() {
     const id = route.params.id
     album.value = await fetchAlbum(id)
 
+    // 检查收藏状态
+    if (userStore.isLoggedIn) {
+      await favorite.check(album.value.album_id)
+    }
+
     // 初始化评论（详情页返回前 5 条）
     comments.value = album.value.comments || []
-    commentsTotal.value = comments.value.length // 初始值，后续可能更大
+    commentsTotal.value = comments.value.length
     commentsPage.value = 1
-    // 如果返回了 5 条，说明可能还有更多，获取总数
     if (comments.value.length === 5) {
       try {
-        const res = await fetch(`/api/albums/${id}/comments?page=1&page_size=5`).then(r => r.json())
+        const res = await fetchComments(id, 1, 5)
         commentsTotal.value = res.total
       } catch { /* ignore */ }
     }
 
-    // 加载社团详情
+    // 加载社团详情 + 关注状态
     if (album.value?.circle?.circle_id) {
       try {
         circleDetail.value = await fetchCircle(album.value.circle.circle_id)
+        if (userStore.isLoggedIn) {
+          const s = await checkCircleFollow(album.value.circle.circle_id)
+          isCircleFollowed.value = s.followed
+        }
       } catch {
         circleDetail.value = null
       }
@@ -267,7 +238,7 @@ async function loadMoreComments() {
   commentsLoading.value = true
   try {
     commentsPage.value++
-    const res = await fetch(`/api/albums/${album.value.album_id}/comments?page=${commentsPage.value}&page_size=5`).then(r => r.json())
+    const res = await fetchComments(album.value.album_id, commentsPage.value, 5)
     comments.value.push(...res.data)
     commentsTotal.value = res.total
   } catch (e) {
@@ -278,18 +249,51 @@ async function loadMoreComments() {
   }
 }
 
-function goToCircle() {
-  if (album.value?.circle) {
-    router.push(`/label/${album.value.circle.circle_id}`)
+async function toggleCircleFollow() {
+  await guardAsync(async () => {
+    const circleId = album.value?.circle?.circle_id
+    if (!circleId) return
+    if (isCircleFollowed.value) {
+      await unfollowCircle(circleId)
+      isCircleFollowed.value = false
+    } else {
+      await followCircle(circleId)
+      isCircleFollowed.value = true
+    }
+  }, () => alert('请先登录'))
+}
+
+async function handleAddComment(content) {
+  try {
+    const res = await addComment(album.value.album_id, content)
+    comments.value = res.data
+    commentsTotal.value = res.total
+    commentsPage.value = 1
+  } catch (e) {
+    console.error('发表评论失败:', e)
   }
 }
 
-function goToTag(name) {
-  router.push({ path: '/tag', query: { tag: name } })
+async function handleEditComment(comment) {
+  const newContent = prompt('编辑评论:', comment.content)
+  if (!newContent || newContent === comment.content) return
+  try {
+    await updateComment(comment.comment_id, newContent)
+    comment.content = newContent
+  } catch (e) {
+    console.error('编辑评论失败:', e)
+  }
 }
 
-function goToAlbum(item) {
-  router.push(`/album/${item.album_id}`)
+async function handleDeleteComment(commentId) {
+  if (!confirm('确定删除这条评论？')) return
+  try {
+    await deleteComment(commentId)
+    comments.value = comments.value.filter(c => c.comment_id !== commentId)
+    commentsTotal.value--
+  } catch (e) {
+    console.error('删除评论失败:', e)
+  }
 }
 
 // 曲目点击播放（TrackList emit 的 preview 事件）
@@ -314,10 +318,8 @@ function handleTrackClick(tracks, startIndex) {
 }
 
 function handleBuy() {
-  if (album.value.price > 0) {
-    alert(`正在购买 ${album.value.title} - ¥${album.value.price}`)
-  } else {
-    alert(`正在下载 ${album.value.title}`)
+  if (album.value.tracks?.length > 0) {
+    player.playAlbumTracks(album.value.tracks, 0)
   }
 }
 
@@ -327,56 +329,26 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ========================================
-   专辑详情页 — 与首页一致的暗黑直角风格
-   主色调：#ff6b6b
-   ======================================== */
-
 .album-detail {
-  background: #0a0a0a;
+  background: var(--color-bg-primary);
   min-height: 100vh;
 }
 
-/* 加载状态 */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  color: #aaa;
-}
-.loading-spinner {
-  width: 32px;
-  height: 32px;
-  border: 2px solid #333;
-  border-top-color: #ff6b6b;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 1rem;
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* 面包屑 */
 .breadcrumb {
   padding: 1.5rem 0 0.5rem;
 }
 .back-link {
-  color: #aaa;
+  color: var(--color-text-muted);
   text-decoration: none;
   font-size: 0.9rem;
   transition: color 0.2s;
 }
 .back-link:hover {
-  color: #ff6b6b;
+  color: var(--color-accent);
 }
 
-/* 主体 */
 .main {
   padding: 0 0 4rem;
-  background: #0a0a0a;
 }
 
 .container {
@@ -397,7 +369,7 @@ onMounted(() => {
   min-width: 0;
 }
 
-/* ==================== 顶部行：封面 + 社团信息 ==================== */
+/* 顶部行：封面 + 社团信息 */
 .top-row {
   display: flex;
   gap: 32px;
@@ -405,14 +377,13 @@ onMounted(() => {
   margin-bottom: 24px;
 }
 
-/* 封面 */
 .cover {
   position: relative;
   width: 400px;
   max-width: 100%;
   flex-shrink: 0;
   aspect-ratio: 1 / 1;
-  border: 1px solid #222;
+  border: 1px solid var(--color-border);
 }
 .cover img {
   width: 100%;
@@ -426,8 +397,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #1a1a1a;
-  color: #555;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-dim);
   font-size: 4rem;
 }
 
@@ -435,7 +406,8 @@ onMounted(() => {
 .circle-card {
   flex: 1;
   min-width: 0;
-  background: #0a0a0a;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   padding: 24px;
 }
 
@@ -448,14 +420,14 @@ onMounted(() => {
   transition: opacity 0.2s;
 }
 .circle-header:hover .circle-name {
-  color: #ff6b6b;
+  color: var(--color-accent);
 }
 
 .circle-logo {
   width: 64px;
   height: 64px;
   object-fit: cover;
-  border: 1px solid #333;
+  border: 1px solid var(--color-border);
   flex-shrink: 0;
   transition: transform 0.25s;
 }
@@ -466,13 +438,13 @@ onMounted(() => {
 .circle-name {
   font-size: 20px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text-primary);
   margin: 0;
 }
 
 .circle-desc {
   font-size: 13px;
-  color: #999;
+  color: var(--color-text-muted);
   line-height: 1.7;
   margin-bottom: 16px;
   display: -webkit-box;
@@ -485,45 +457,63 @@ onMounted(() => {
   display: flex;
   gap: 20px;
   font-size: 13px;
-  color: #777;
+  color: var(--color-text-dim);
   margin-bottom: 18px;
 }
 .circle-stats i {
   margin-right: 5px;
-  color: #ff6b6b;
+  color: var(--color-accent);
   width: 16px;
 }
 
+.circle-card-actions {
+  display: flex;
+  gap: 10px;
+}
 .circle-link-btn {
   background: none;
-  border: 1px solid #444;
-  color: #bbb;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
   padding: 8px 20px;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
 }
 .circle-link-btn:hover {
-  border-color: #ff6b6b;
-  color: #ff6b6b;
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.circle-follow-btn {
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  color: var(--color-text-primary);
+  padding: 8px 20px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.circle-follow-btn.followed {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
 }
 
 /* 信息区 */
 .title {
   font-size: 28px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text-primary);
   margin-bottom: 4px;
 }
 .artist {
   font-size: 15px;
-  color: #888;
+  color: var(--color-text-muted);
   margin-bottom: 10px;
   cursor: pointer;
   transition: color 0.2s;
 }
 .artist:hover {
-  color: #ff6b6b;
+  color: var(--color-accent);
 }
 
 .stats-row {
@@ -535,8 +525,8 @@ onMounted(() => {
 .price-tag {
   font-size: 13px;
   font-weight: 600;
-  color: #ff6b6b;
-  background: #1a1a1a;
+  color: var(--color-accent);
+  background: var(--color-bg-secondary);
   padding: 2px 10px;
 }
 .price-tag.free {
@@ -546,7 +536,7 @@ onMounted(() => {
 .detail-fav-btn {
   background: none;
   border: none;
-  color: #666;
+  color: var(--color-text-dim);
   font-size: 1.3rem;
   cursor: pointer;
   padding: 0;
@@ -554,10 +544,10 @@ onMounted(() => {
   transition: color 0.2s;
 }
 .detail-fav-btn:hover {
-  color: #ff6b6b;
+  color: var(--color-accent);
 }
 .detail-fav-btn.favorited {
-  color: #ff6b6b;
+  color: var(--color-accent);
 }
 
 .desc {
@@ -566,7 +556,7 @@ onMounted(() => {
 .desc-title {
   font-size: 15px;
   font-weight: 600;
-  color: #eee;
+  color: var(--color-text-primary);
   line-height: 1.8;
   margin-bottom: 8px;
   white-space: pre-line;
@@ -574,7 +564,7 @@ onMounted(() => {
 .desc-content {
   font-size: 14px;
   font-weight: 300;
-  color: #aaa;
+  color: var(--color-text-muted);
   line-height: 1.8;
   white-space: pre-line;
 }
@@ -587,26 +577,25 @@ onMounted(() => {
   margin-bottom: 32px;
 }
 .tag {
-  background: #2a2a2a;
-  color: #bbb;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-muted);
   padding: 3px 10px;
   font-size: 12px;
   cursor: pointer;
   transition: background 0.2s;
 }
 .tag:hover {
-  background: #3a3a3a;
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--color-accent);
 }
 
-/* 分区标题 */
 .section {
   margin-bottom: 32px;
 }
 
-/* 发布信息 */
 .meta {
   font-size: 12px;
-  color: #666;
+  color: var(--color-text-dim);
   margin-top: 8px;
 }
 
@@ -619,8 +608,8 @@ onMounted(() => {
 }
 
 .side-card {
-  background: #1a1a1a;
-  border: 1px solid #222;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   padding: 20px;
   margin-bottom: 16px;
   flex-shrink: 0;
@@ -629,12 +618,15 @@ onMounted(() => {
 .comment-card {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+  background: transparent;
+  border: none;
+  padding: 0;
+  max-height: 60vh;
 }
 
-/* 购买卡片 */
+/* 试听卡片 */
 .price-row {
   display: flex;
   align-items: baseline;
@@ -645,11 +637,11 @@ onMounted(() => {
 .price-num {
   font-size: 26px;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-primary);
 }
 .price-label {
   font-size: 12px;
-  color: #ff6b6b;
+  color: var(--color-accent);
 }
 .price-label.free {
   color: #4caf50;
@@ -659,8 +651,8 @@ onMounted(() => {
   display: block;
   width: 100%;
   padding: 11px 0;
-  background: #ff6b6b;
-  color: #fff;
+  background: var(--color-accent);
+  color: var(--color-text-primary);
   border: none;
   font-size: 15px;
   font-weight: 600;
@@ -669,13 +661,13 @@ onMounted(() => {
   transition: background 0.2s;
 }
 .buy-btn:hover {
-  background: #ff8787;
+  background: var(--color-accent-hover);
 }
 
 .buy-info {
   list-style: none;
   font-size: 12px;
-  color: #aaa;
+  color: var(--color-text-muted);
   padding: 0;
 }
 .buy-info li {
@@ -687,12 +679,12 @@ onMounted(() => {
 .recommend {
   margin-top: 20px;
   padding-top: 32px;
-  border-top: 1px solid #222;
+  border-top: 1px solid var(--color-border);
 }
 .recommend h3 {
   font-size: 18px;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-text-primary);
   margin-bottom: 20px;
 }
 .rec-list {
@@ -705,7 +697,7 @@ onMounted(() => {
   height: 4px;
 }
 .rec-list::-webkit-scrollbar-thumb {
-  background: #333;
+  background: var(--color-border);
 }
 .rec-item {
   flex-shrink: 0;
@@ -719,7 +711,7 @@ onMounted(() => {
 .rec-cover {
   width: 140px;
   height: 140px;
-  border: 1px solid #222;
+  border: 1px solid var(--color-border);
   margin-bottom: 8px;
   overflow: hidden;
 }
@@ -731,14 +723,14 @@ onMounted(() => {
 }
 .rec-title {
   font-size: 13px;
-  color: #ddd;
+  color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .rec-artist {
   font-size: 11px;
-  color: #777;
+  color: var(--color-text-dim);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

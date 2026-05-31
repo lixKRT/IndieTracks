@@ -1,6 +1,6 @@
 # IndieTracks 项目上下文
 
-> 最后更新：2026-05-15（grill-with-docs 访谈 + P2 首页改造）
+> 最后更新：2026-05-31（用户系统设计）
 
 ## 项目定位
 
@@ -15,9 +15,13 @@
 | 用户（User） | 角色：`normal`（普通）或 `pro`（社团成员） |
 | 曲目（WorkFile） | 专辑音轨。`file_type`：`preview`（试听）或 `full`（完整版） |
 | 标签（Tag） | 专辑分类标记。专辑-标签多对多 |
-| 收藏（Favorite） | 用户-专辑多对多 |
-| 评论（Comment） | 用户对专辑的文本评价 |
+| 收藏（Favorite） | 用户-专辑多对多。登录用户可收藏/取消收藏 |
+| 评论（Comment） | 用户对专辑的文本评价。登录用户可发表/编辑/删除自己的评论 |
+| 关注社团（CircleFollow） | 用户-社团多对多。登录用户可关注/取消关注 |
+| 关注用户（UserFollow） | 用户-用户多对多。登录用户可关注/取消关注 |
 | 专辑内容信息 | `info_title`（TEXT）和 `info_content`（TEXT）。爬虫原样入库，非必填 |
+| JWT | HttpOnly Cookie 传递，普通登录 7 天有效期，"记住我"30 天 |
+| BCrypt | 密码加密算法，Spring Security 内置支持 |
 
 ## 技术约定
 
@@ -58,12 +62,12 @@ molecules → organisms → layouts → views
 
 | 路由 | 状态 |
 |:---|:---|
-| `/` 首页 | ✅ Mock 完成 |
-| `/album/:id` 专辑详情 | ✅ Mock 完成 |
-| `/labels` 社团列表 | ✅ Mock 完成 |
-| `/label/:id` 社团详情 | ✅ Mock 完成 |
-| `/tag` 分类浏览 | ✅ Mock 完成 |
-| `/user/:id` 用户页 | ⬜ 后期 |
+| `/` 首页 | ✅ 联调完成 |
+| `/album/:id` 专辑详情 | ✅ 联调完成 |
+| `/labels` 社团列表 | ✅ 联调完成 |
+| `/label/:id` 社团详情 | ✅ 联调完成 |
+| `/tag` 分类浏览 | ✅ 联调完成 |
+| `/user/:id` 用户页 | ⬜ 用户系统开发中 |
 
 ### Pinia Store
 

@@ -93,7 +93,8 @@ CREATE TABLE IF NOT EXISTS comments (
     user_id     INT REFERENCES users(user_id) ON DELETE SET NULL,
     album_id    INT REFERENCES albums(album_id) ON DELETE CASCADE,
     content     TEXT NOT NULL,
-    created_at  TIMESTAMP DEFAULT NOW()
+    created_at  TIMESTAMP DEFAULT NOW(),
+    UNIQUE (user_id, album_id, content)
 );
 
 -- ── 收藏表 ──────────────────────────────────────────────
@@ -166,5 +167,24 @@ BEGIN
         WHERE table_name = 'circles' AND column_name = 'member_count'
     ) THEN
         ALTER TABLE circles ADD COLUMN member_count INTEGER DEFAULT 0;
+    END IF;
+END $$;
+
+-- ── 迁移：comments 表添加唯一约束 ─────────────────────
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_name = 'comments' AND constraint_type = 'UNIQUE'
+    ) THEN
+        -- 先清理重复数据
+        DELETE FROM comments
+        WHERE comment_id NOT IN (
+            SELECT MIN(comment_id) FROM comments
+            GROUP BY user_id, album_id, content
+        );
+        -- 再添加约束
+        ALTER TABLE comments ADD CONSTRAINT comments_user_album_content_unique
+        UNIQUE (user_id, album_id, content);
     END IF;
 END $$;

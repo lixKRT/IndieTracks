@@ -15,10 +15,13 @@ python setup_db.py                       # 执行 database/create_database.sql
 scrapy crawl album_test                  # 测试爬虫（10 张专辑，调试用）
 scrapy crawl album_bulk                  # 批量爬虫（遵守 spider.json）
 scrapy crawl album_incremental           # 增量爬虫（永远增量，不受 spider.json 控制）
-scrapy crawl circle                      # 社团爬虫（描述+logo+成员）
+scrapy crawl circle                      # 社团爬虫（描述+logo+成员ID）
 scrapy crawl user_roles                  # 用户角色爬虫 /setup
 scrapy crawl user_pages                  # 用户维页面（DB 读取，默认 20 人）
 scrapy crawl user_pages -a user_ids=2,3  # 用户维页面（指定用户）
+
+# 单元测试
+python -m pytest tests/ -v               # 运行全部测试（195 个）
 ```
 
 ## 配置文件 (`crawler/config/`)
@@ -43,31 +46,71 @@ crawler/
 │   ├── spider.json
 │   └── minio.json
 ├── indietracks_spider/
-│   ├── items.py              # 14 个 Scrapy Item（含临时关联字段 _dizzylab_*）
-│   ├── pipelines.py          # PostgreSQL Pipeline（upsert + ID 缓存 + 13 种 item）
-│   ├── settings.py           # 动态加载 config JSON
+│   ├── items.py              # 12 个 Scrapy Item（含临时关联字段 _dizzylab_*）
+│   ├── pipelines.py          # PostgreSQL Pipeline（注册表调度 + 计数汇总）
+│   ├── repository.py         # 统一持久化层（FK 缓存 + Upsert + 直接 SQL 操作）
+│   ├── item_registry.py      # Item 注册表（resolve + upsert 函数注册）
+│   ├── db_mixin.py           # DbSpiderMixin（统一 DB 连接管理）
+│   ├── settings.py           # 延迟加载 config JSON
 │   ├── utils/
-│   │   ├── config_loader.py  # get_delay/spider/database/minio_config()
+│   │   ├── config_loader.py  # get_delay/spider/database/minio_config() + 测试注入
 │   │   ├── constants.py      # BASE, API_DISCS, PAGE_SIZE, TRACK_RE
-│   │   ├── db.py             # get_connection(), close_connection()
-│   │   ├── delay.py          # between_albums_sleep(), between_tracks_sleep()
-│   │   ├── circle.py         # extract_circle_info(), yield_circle_members() — 社团详情解析
-│   │   ├── minio.py          # download_image/download_and_upload() — CDN 下载 + MinIO 上传
-│   │   └── parsing.py        # extract_user_id, parse_date_cn, parse_track_title, safe_json_load, check_response_ok
+│   │   ├── db.py             # DbConnection 上下文管理器 + 旧接口兼容
+│   │   ├── delay.py          # schedule_album_delay(), schedule_track_delay(), schedule_circle_delay()
+│   │   ├── storage.py        # StorageBackend 抽象 + MinioBackend + MemoryBackend
+│   │   ├── circle.py         # extract_circle_info(), yield_circle_members()
+│   │   ├── minio.py          # 向后兼容代理 → storage.py
+│   │   └── parsing.py        # safe_json_load, check_response_ok, extract_user_id 等
 │   └── spiders/
-│       ├── album_base.py         # 专辑爬虫基类（共享 parse 方法 + _album_is_complete）
-│       ├── album_test.py         # 测试爬虫（10 张专辑）
-│       ├── album_bulk.py         # 批量爬虫（reactor.callLater 非阻塞延迟）
-│       ├── album_incremental.py  # 增量爬虫（遇完整专辑即停）
-│       ├── circle.py             # 社团（描述+logo+成员ID）（member_count 精确跳过 + reactor 延迟）
-│       ├── user_roles.py         # STAFF/PRO 角色
-│       └── user_pages.py         # 用户已购/收藏/关注社团
+│       ├── album_base.py     # 专辑爬虫基类（make_disc_request + _parse_discs_response）
+│       ├── album_test.py     # 测试爬虫（10 张专辑）
+│       ├── album_bulk.py     # 批量爬虫（reactor.callLater 非阻塞延迟）
+│       ├── album_incremental.py # 增量爬虫（遇完整专辑即停）
+│       ├── circle.py         # 社团爬虫（_pop_next_circle 队列驱动）
+│       ├── user_roles.py     # STAFF/PRO 角色（PRO xpath 有上界）
+│       └── user_pages.py     # 用户已购/收藏/关注（自动建占位行）
+├── tests/                    # 单元测试（195 个用例）
+│   ├── conftest.py           # 共享 fixtures
+│   ├── test_album_base.py    # make_disc_request + _parse_discs_response
+│   ├── test_album_complete.py
+│   ├── test_circle_utils.py
+│   ├── test_config_loader.py
+│   ├── test_constants.py
+│   ├── test_db.py            # DbConnection 全生命周期
+│   ├── test_db_mixin.py
+│   ├── test_delay.py
+│   ├── test_item_registry.py
+│   ├── test_items.py
+│   ├── test_parsing.py
+│   ├── test_pipelines.py
+│   ├── test_repository.py    # Repository 全部方法
+│   └── test_storage.py       # MinioBackend + MemoryBackend
 ├── tool/
 │   └── get_url.py            # 网页源码获取工具
 ├── requirements.txt          # scrapy + psycopg2-binary + minio
 ├── scrapy.cfg
 └── setup_db.py
 ```
+
+## 架构分层
+
+```
+Spider (解析 HTML → yield Item)
+  │
+  ├── DbSpiderMixin → DbConnection → Repository（蜘蛛直写：update_role, mark_user_crawled 等）
+  │
+  └── Pipeline → item_registry（resolve + upsert）→ Repository（Item 写入）
+```
+
+### 核心模块职责
+
+| 模块 | 职责 | 接口深度 |
+|:---|:---|:---|
+| `Repository` | 所有 DB 读写，FK 缓存，upsert，直接 SQL 操作 | 深（一个类覆盖 13 张表） |
+| `item_registry` | Item 类型 → (resolve_fn, upsert_fn) 注册表 | 深（新增 Item 只需 register） |
+| `DbSpiderMixin` | 蜘蛛 DB 连接懒初始化 + 统一清理 | 深（4 个蜘蛛共用） |
+| `StorageBackend` | 文件存储抽象（MinIO 生产 / Memory 测试） | 深（可替换后端） |
+| `DbConnection` | 数据库连接上下文管理器，支持 config 注入 | 深（测试无需真实 DB） |
 
 ## 爬虫设计
 
@@ -82,22 +125,10 @@ crawler/
 | `full` | 重爬（计入 max_albums） | 重爬（计入 max_albums） |
 | `incremental` | 跳过 | **不跳过**，视为未完整爬取 |
 
-**架构：** 队列驱动 + reactor 延迟。
-
-```
-start_requests → API 首页
-parse_disc_list → 入队列 _pending_discs
-_schedule_next → crawler.engine.crawl() 注入单张专辑
-parse_album_detail (BaseAlbumSpider) → 解析 + 音频下载
-_after_album_detail → reactor.callLater(wait, _schedule_next) ← 不阻塞 reactor
-队列空 → 自动翻页
-增量模式整页跳过 → 停止
-```
-
 **流程（parse_album_detail，继承自 BaseAlbumSpider）：**
 1. 构造 AlbumItem → yield
-2. 遍历曲目 `<li data-audio="...">` → `download_and_upload()` → yield WorkFileItem
-3. 曲目间延迟：`between_tracks_min + rand(0, between_tracks_random_max)` 秒（time.sleep，CDN 下载同步阻塞）
+2. 遍历曲目 `<li data-audio="...">` → `storage.upload_audio()` → yield WorkFileItem
+3. 曲目间延迟：`between_tracks_min + rand(0, between_tracks_random_max)` 秒
 4. 解析 Tag → yield TagItem + AlbumTagItem
 5. 解析 Circle → yield CircleItem + AlbumCircleItem
 6. yield 子请求：buyers → comments → circle_detail
@@ -113,25 +144,28 @@ _after_album_detail → reactor.callLater(wait, _schedule_next) ← 不阻塞 re
 
 ### circle — 社团爬虫
 
-- 队列驱动 + reactor.callLater 延迟（不阻塞引擎）
+- `_pop_next_circle()` 从队列取出下一个社团，返回 Request
+- `start()` yield 第一个请求，后续通过 `_on_delay_done` → `engine.crawl()` 注入
 - `full`: 全部重爬 / `incremental`: 比较 `circles.member_count` 与 `user_circles` 行数，一致则跳过
-- 抓取社团描述 (`<p id='labeldesp'>`)、logo、成员ID
-- 爬完后 `UPDATE circles SET description, logo_url, member_count`
-- 用户头像由 user_pages.py 负责处理
+- 异常保护：DB 写入失败不阻塞延迟回调
 
 ### user_roles — 用户角色
 
 - 爬 `/setup`，解析 STAFF / PRO 区域
+- PRO xpath 有上界（遇到下一个 h2 即停止），不会溢出到后续区域
 - `full`: 全部 UPDATE role / `incremental`: 仅 UPDATE role 为空或 normal 的用户
-- 直接 DB UPDATE，不走 Pipeline。HTTP 非 2xx 则 CloseSpider
+- 通过 Repository.update_role() 写入，staff 不可降级
 
 ### user_pages — 用户维页面
 
-- 3 个页面：`/u/{id}/music/` (`?page=N`) → owned_albums, `/u/{id}/likes/` (`?dp=N`) → favorites, `/u/{id}/following/` (`?dp=N`) → circle_follows
+- 3 个页面：`/u/{id}/music/` → owned_albums, `/u/{id}/likes/` → favorites, `/u/{id}/following/` → circle_follows
 - 用户来源：`-a user_ids=` 或 DB 读取（incremental 跳过 30 天内已爬）
-- 专辑 ID 在 spider 内通过 DB 直接查（不存在的建占位行），社团 ID 同理
+- `resolve_album_id` / `resolve_circle_id_by_name` 查不到时自动建占位行
+- 通过 Repository 写入，不走 Pipeline
 
 ## Pipeline 写入策略
+
+Pipeline 使用 `item_registry` 注册表调度，不再有 isinstance 链：
 
 | 步骤 | 表 | 去重方式 |
 |:---|:---|:---|
@@ -142,84 +176,36 @@ _after_album_detail → reactor.callLater(wait, _schedule_next) ← 不阻塞 re
 | 5 | `album_tags` | `ON CONFLICT DO NOTHING` |
 | 6 | `album_circles` | `ON CONFLICT DO NOTHING` |
 | 7 | `work_files` | `DELETE + INSERT`（按 album_id 清旧数据） |
-| 8 | `comments` | 直接 INSERT |
+| 8 | `comments` | `ON CONFLICT (user_id, album_id, content) DO NOTHING` |
 | 9 | `owned_albums` | `ON CONFLICT DO NOTHING` |
 | 10 | `favorites` | `ON CONFLICT DO NOTHING` |
 | 11 | `user_circles` | `ON CONFLICT DO NOTHING` |
 | 12 | `circle_follows` | `ON CONFLICT DO NOTHING` |
-| 13 | `user_follows` | `ON CONFLICT DO NOTHING`（预留，dizzylab 无此功能） |
 
-**临时字段解析：** Pipeline `_resolve_refs` 将 `_dizzylab_id` / `_dizzylab_user_id` / `_dizzylab_labelid` / `_tag_name` 等临时字段通过内存缓存映射为 DB 主键。`circle_id` 缓存未命中时，`_lookup_circle()` 会从 DB 回退查询并回填缓存（解决 circle_members 等独立进程运行时的空缓存问题）。所有临时字段已在 `items.py` 中定义。
+**FK 解析：** `item_registry` 的 resolve 函数将 `_dizzylab_id` / `_dizzylab_user_id` / `_dizzylab_labelid` / `_tag_name` 临时字段通过 Repository 缓存映射为 DB 主键。解析失败时 `logger.warning` 警告（不再静默 None）。
+
+**写入汇总：** Pipeline 关闭时打印 `Pipeline 写入汇总: AlbumItem=50 | WorkFileItem=320 | ...`
 
 ## 错误处理
 
-所有 parse 回调统一使用 `utils/parsing.py` 中的两个保护函数：
+- `safe_json_load(response)` — JSON 解析失败返回 None + log warning
+- `check_response_ok(response)` — HTTP 400+ 返回 False（3xx 不阻断，429 返回 False 由 retry 处理）
+- `float(price)` — 非数字价格回退 0.0，不崩溃
+- Pipeline 异常 → rollback + 返回 None（item 丢弃）+ log error
+- circle 爬虫 `_on_delay_done` — 异常保护，失败后仍尝试继续
+- circle 爬虫 `parse_circle_detail` — DB 写入失败不阻塞延迟回调注册
 
-- `safe_json_load(response)` — JSON 解析失败返回 None + log warning（不会崩溃）
-- `check_response_ok(response)` — HTTP ≥400 返回 False + log warning
-
-覆盖范围：
-- `parse_disc_list` × 3（album_bulk/incremental/test）— JSON + HTTP
-- `parse_buyers` / `parse_comments`（BaseAlbumSpider）— JSON + HTTP
-- `parse_setup`（user_roles）— HTTP（失败 CloseSpider）
-- `parse_circle_detail`（circle）— HTTP（失败跳过，继续下一个）
-- `parse_music/likes/following` × 3（user_pages）— HTTP（失败跳过）
-
-## MinIO 文件下载
-
-`utils/minio.py` 提供两个函数：
-
-| 函数 | 用途 | 自动判断前缀 |
-|:---|:---|:---|
-| `download_image(cdn_url)` | 图片（封面/logo/头像） | 根据 URL 路径自动选 covers/logos/avatars |
-| `download_and_upload(cdn_url, album_slug, sort_order)` | 音频试听 | 固定 audio/preview/ |
-
-**调用位置：**
-- `album_base.py::parse_album_detail` — 专辑封面 + 社团 logo
-- `album_base.py::parse_buyers` — 用户头像
-- `album_base.py::parse_comments` — 用户头像
-- `user_pages.py::parse_music` — 用户头像
-
-**URL 前缀自动识别：**
-- `/media/cover/` → `covers/`
-- `/media/label_cover/` → `logos/`
-- `/media/avatars/` → `avatars/`
-
-**前置条件：** MinIO 服务必须先启动（`scripts/windows/setup-minio.py`）。
-
-## 数据库
-
-### 14 张表
-
-- `users` — dizzylab_user_id UNIQUE, role: normal/pro/staff, `userpage_crawled_at`
-- `circles` — dizzylab_labelid UNIQUE, `member_count` 成员数追踪
-- `user_circles` — 用户-社团（多对多）
-- `albums` — dizzylab_id UNIQUE, info_title + info_content 替代 description
-- `album_circles` — 专辑-社团（多对多）
-- `work_files` — 曲目, file_type: preview/full, object_key 存 MinIO 路径
-- `tags` / `album_tags` — 标签分类（多对多）
-- `comments` — 评论
-- `favorites` — 收藏（多对多）
-- `owned_albums` — 已购（多对多）
-- `circle_follows` — 关注社团（多对多）
-- `user_follows` — 关注用户（多对多，预留）
-
-所有表用 SERIAL PK。唯一索引：dizzylab_id / dizzylab_user_id / dizzylab_labelid。
-
-### 初始化
+## 测试
 
 ```bash
-psql -U postgres -d indietracks -f database/create_database.sql   # 建表 + 幂等迁移
-psql -U postgres -d indietracks -f database/init.sql              # 清空数据 + 重置序列
+cd crawler
+.\env\Scripts\activate
+python -m pytest tests/ -v               # 195 个用例
+python -m pytest tests/test_repository.py # Repository 单独测试
 ```
 
-## 爬虫执行优先级
-
-| 顺序 | 爬虫 | 前置条件 | 用途 |
-|:---|:---|:---|:---|
-| 1 | `album_bulk`（full, max=50） | MinIO 已启动 | 首批数据铺底 + 音频下载 |
-| 2 | `album_incremental` | 首期数据已有 | 日常追新 |
-| 3 | `circle` | circles 表有数据 | 社团描述+logo+成员 |
-| 4 | `user_roles` | users 表有数据 | 角色标记 |
-| 5 | `user_pages` | users/albums/circles 有数据 | 用户已购/收藏/关注 |
-| 6 | `album_bulk`（full, max=0） | MinIO 已启动 | 最终全量刷新 |
+测试使用：
+- `MemoryBackend` 替代 MinIO（无需真实服务）
+- `DbConnection(config={...})` 注入配置（无需真实数据库）
+- `set_config_override()` / `clear_config_overrides()` 注入配置
+- `clear_registry()` / `register_builtins()` 重置注册表

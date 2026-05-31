@@ -4,17 +4,22 @@ BaseAlbumSpider — 专辑爬虫基类。
 提取 album_bulk / album_incremental / album_test 共享的解析方法：
 - parse_album_detail（含 MinIO 音频下载）
 - parse_buyers / parse_comments / parse_circle_detail
-- _album_is_complete / _ensure_db_check
+- _album_is_complete（通过 Repository）
+
+使用 DbSpiderMixin 统一 DB 连接管理。
 """
+
+from __future__ import annotations
 
 import json
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import quote
 
 import scrapy
 
+from indietracks_spider.db_mixin import DbSpiderMixin
 from indietracks_spider.items import (
     AlbumItem,
     WorkFileItem,
@@ -27,14 +32,14 @@ from indietracks_spider.items import (
     CommentItem,
     OwnedAlbumItem,
 )
-from indietracks_spider.utils.constants import BASE, TRACK_RE
-from indietracks_spider.utils.db import get_connection
-from indietracks_spider.utils.delay import between_tracks_sleep
-from indietracks_spider.utils.minio import download_and_upload, download_image
+from indietracks_spider.utils.constants import BASE, API_DISCS, PAGE_SIZE
+from indietracks_spider.utils.delay import schedule_track_delay
+from indietracks_spider.utils.storage import get_storage_backend
 from indietracks_spider.utils.circle import extract_circle_info, yield_circle_members
 from indietracks_spider.utils.parsing import (
     extract_user_id,
     parse_date_cn,
+    parse_track_title,
     safe_json_load,
     check_response_ok,
 )
@@ -42,7 +47,7 @@ from indietracks_spider.utils.parsing import (
 logger = logging.getLogger(__name__)
 
 
-class BaseAlbumSpider(scrapy.Spider):
+class BaseAlbumSpider(DbSpiderMixin, scrapy.Spider):
     """专辑爬虫基类——子类只需实现 start_requests 和 parse_disc_list。"""
 
     custom_settings = {
@@ -53,48 +58,57 @@ class BaseAlbumSpider(scrapy.Spider):
 
     _track_min: int = 1
     _track_random_max: int = 3
-    _check_conn = None
-    _check_cur = None
 
     # ── DB 检查 ──────────────────────────────────────
 
-    def _ensure_db_check(self):
-        if self._check_cur is not None:
-            return
-        self._check_conn, self._check_cur = get_connection()
-
     def _album_is_complete(self, dizzylab_id: str) -> bool:
-        self._ensure_db_check()
-        self._check_cur.execute(
-            "SELECT info_title FROM albums WHERE dizzylab_id = %s",
-            (dizzylab_id,),
+        self._ensure_db()
+        return self.repo.is_album_complete(dizzylab_id)
+
+    # ── API 工具方法 ─────────────────────────────────
+
+    @staticmethod
+    def make_disc_request(start: int, callback, meta: dict = None, **kwargs):
+        """构造专辑列表 API 请求。"""
+        end = start + PAGE_SIZE
+        return scrapy.Request(
+            f"{API_DISCS}?l={start}&r={end}&sort=ad&type=album",
+            callback=callback,
+            meta=meta or {},
+            dont_filter=True,
+            **kwargs,
         )
-        row = self._check_cur.fetchone()
-        return row is not None and row[0] is not None
 
-    def _close_check_db(self):
-        if self._check_cur:
-            self._check_cur.close()
-        if self._check_conn:
-            self._check_conn.close()
+    @staticmethod
+    def _parse_discs_response(response) -> list[dict] | None:
+        """解析专辑列表 API 响应，返回 discs 列表或 None（失败时）。"""
+        if not check_response_ok(response):
+            return None
+        data = safe_json_load(response)
+        if data is None:
+            return None
+        return data.get("discs", [])
 
-    def closed(self, reason):
-        self._close_check_db()
+    # ── 专辑详情页 ───────────────────────────────────
 
     # ── 专辑详情页 ───────────────────────────────────
 
     def parse_album_detail(self, response):
         disc = response.meta["disc"]
         slug = disc["id"]
+        storage = get_storage_backend()
 
         # ── AlbumItem ──
         album = AlbumItem()
         album["dizzylab_id"] = slug
         album["title"] = disc.get("title", "")
-        album["price"] = float(disc.get("price", 0))
+        try:
+            album["price"] = float(disc.get("price", 0))
+        except (ValueError, TypeError):
+            album["price"] = 0.0
         album["cover_url"] = disc.get("cover", "")
 
-        # info_title: 专辑介绍段落（<p class="text-left" style="margin-top:32px">）
+        # info_title: 专辑介绍段落
         info_p = response.xpath("//p[@class='text-left' and contains(@style,'margin-top:32px')]")
         if info_p:
             raw_html = info_p[0].get()
@@ -104,7 +118,7 @@ class BaseAlbumSpider(scrapy.Spider):
         else:
             album["info_title"] = ""
 
-        # info_content: <h3 class="text-left"> 内容（购买说明或曲目列表）
+        # info_content: <h3> 区段
         info_h3 = response.xpath("//h3[@class='text-left' and not(contains(@class,'p-1'))]")
         if info_h3:
             raw_h3 = info_h3[0].get()
@@ -123,7 +137,7 @@ class BaseAlbumSpider(scrapy.Spider):
             album["cover_url"] = cover
 
         # 封面上传 MinIO
-        cover_key = download_image(album.get("cover_url", ""))
+        cover_key = storage.upload_image(album.get("cover_url", ""))
         if cover_key:
             album["cover_url"] = cover_key
 
@@ -141,7 +155,7 @@ class BaseAlbumSpider(scrapy.Spider):
             obj_key = None
             file_size = 0
             if data_audio:
-                result = download_and_upload(data_audio, slug, sort_order)
+                result = storage.upload_audio(data_audio, slug, sort_order)
                 if result:
                     obj_key, file_size = result
                 else:
@@ -159,17 +173,13 @@ class BaseAlbumSpider(scrapy.Spider):
             wf["object_key"] = obj_key or data_audio
 
             if title_text:
-                m = TRACK_RE.match(title_text.strip())
-                if m:
-                    wf["file_name"] = m.group(1).strip()
-                    wf["track_length"] = m.group(2)
-                else:
-                    wf["file_name"] = title_text.strip()
-                    wf["track_length"] = ""
+                file_name, track_length = parse_track_title(title_text.strip())
+                wf["file_name"] = file_name
+                wf["track_length"] = track_length
 
             yield wf
 
-            between_tracks_sleep(self._track_min, self._track_random_max)
+            schedule_track_delay(self._track_min, self._track_random_max)
 
         # ── Tag + AlbumTag ──
         tag_as = response.xpath("//h4[@class='text-left']/a")
@@ -196,7 +206,7 @@ class BaseAlbumSpider(scrapy.Spider):
             circle["dizzylab_labelid"] = int(labelid)
             circle["name"] = labelname
             logo_url = disc.get("labelcover", "")
-            logo_key = download_image(logo_url)
+            logo_key = storage.upload_image(logo_url)
             circle["logo_url"] = logo_key or logo_url
             circle["description"] = None
             yield circle
@@ -238,6 +248,18 @@ class BaseAlbumSpider(scrapy.Spider):
         """子类覆盖：在专辑所有子请求 yield 后执行（默认无操作）。"""
         pass
 
+    def _make_user_item(self, uid: int, username: str, avatar: str = None) -> UserItem:
+        """创建 UserItem，自动处理头像下载。"""
+        storage = get_storage_backend()
+        avatar_key = storage.upload_image(avatar) if avatar else None
+        u = UserItem()
+        u["dizzylab_user_id"] = uid
+        u["username"] = username
+        if avatar_key:
+            u["avatar_url"] = avatar_key
+        u["user_role"] = "normal"
+        return u
+
     # ── 已购用户 ─────────────────────────────────────
 
     def parse_buyers(self, response):
@@ -257,13 +279,7 @@ class BaseAlbumSpider(scrapy.Spider):
             avatar = avatars[i].strip('"') if i < len(avatars) else None
 
             if uid:
-                avatar_key = download_image(avatar) if avatar else None
-                u = UserItem()
-                u["dizzylab_user_id"] = uid
-                u["username"] = username
-                u["avatar_url"] = avatar_key or avatar
-                u["user_role"] = "normal"
-                yield u
+                yield self._make_user_item(uid, username, avatar)
 
             if uid:
                 oa = OwnedAlbumItem()
@@ -293,27 +309,22 @@ class BaseAlbumSpider(scrapy.Spider):
             avatar = avatars[i].strip('"') if i < len(avatars) else None
 
             if uid:
-                avatar_key = download_image(avatar) if avatar else None
-                u = UserItem()
-                u["dizzylab_user_id"] = uid
-                u["username"] = username
-                u["avatar_url"] = avatar_key or avatar
-                u["user_role"] = "normal"
-                yield u
+                yield self._make_user_item(uid, username, avatar)
 
             c = CommentItem()
             c["user_id"] = None
             c["album_id"] = None
             c["content"] = comments[i]
-            c["created_at"] = datetime.now()
+            c["created_at"] = datetime.now(timezone.utc)
             c["_dizzylab_user_id"] = uid
             c["_dizzylab_id"] = slug
             yield c
 
-    # ── 社团详情（复用共享函数） ─────────────────────
+    # ── 社团详情 ─────────────────────────────────────
 
     def parse_circle_detail(self, response):
         if not check_response_ok(response):
+            self.logger.warning("社团详情页异常: %s", response.url)
             return
         labelid = response.meta["_dizzylab_labelid"]
         name = response.meta.get("_labelname", "")
@@ -329,15 +340,8 @@ class BaseAlbumSpider(scrapy.Spider):
                 member_count += 1
 
         # 更新社团描述、logo、成员数
-        self._ensure_db_check()
-        self._check_cur.execute(
-            """UPDATE circles
-               SET description = %s,
-                   logo_url = COALESCE(%s, logo_url),
-                   member_count = %s
-               WHERE dizzylab_labelid = %s""",
-            (description, logo_key, member_count, labelid),
-        )
+        self._ensure_db()
+        self.repo.update_circle_info_by_labelid(labelid, description, logo_key, member_count)
 
         if description or member_count > 0:
             self.logger.info("  社团 %s: 描述=%s | 成员=%d",

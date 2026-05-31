@@ -15,7 +15,7 @@ public class TagService {
         this.tagMapper = tagMapper;
     }
 
-    public List<Tag> getAllTags() {
-        return tagMapper.selectList(null);
+    public List<Tag> getTopTags(int limit) {
+        return tagMapper.selectTopTags(limit);
     }
 }
