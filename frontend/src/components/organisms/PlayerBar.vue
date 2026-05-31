@@ -1,6 +1,8 @@
 <!-- 底部播放条（有机体） -->
 <template>
   <aside v-if="store.playlist_length > 0" class="player-bar" :class="{ expanded: store.is_expanded }">
+    <audio ref="audio" preload="auto"></audio>
+
     <!-- 收起态 -->
     <div class="player-bar-collapsed">
       <div class="player-now-playing" @click="store.toggleExpand()">
@@ -16,12 +18,12 @@
       </div>
     </div>
 
-    <!-- 进度条（收起态 + 展开态都显示） -->
+    <!-- 进度条 -->
     <div class="player-progress" @click="seekProgress">
       <div class="player-progress-track">
         <div class="player-progress-fill" :style="{ width: progressPercent + '%' }"></div>
       </div>
-      <span class="player-progress-time">{{ formatTime(currentTime) }} / {{ store.current_track?.duration || '0:00' }}</span>
+      <span class="player-progress-time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
     </div>
 
     <!-- 展开态 -->
@@ -44,7 +46,7 @@
           <span class="playlist-drag-handle">⠿</span>
           <span class="playlist-index">{{ index + 1 }}</span>
           <span class="playlist-name" @click="store.setCurrentIndex(index)">{{ track.file_name }}</span>
-          <span class="playlist-duration">{{ track.duration }}</span>
+          <span class="playlist-duration">{{ track.track_length }}</span>
           <button class="playlist-remove" @click.stop="store.removeTrack(index)" title="移除">&times;</button>
         </div>
       </div>
@@ -60,8 +62,9 @@ export default {
   data() {
     return {
       currentTime: 0,
-      progressTimer: null,
-      dragFrom: -1
+      duration: 0,
+      dragFrom: -1,
+      seeking: false
     };
   },
   setup() {
@@ -70,57 +73,73 @@ export default {
   },
   computed: {
     progressPercent() {
-      const dur = this.parseSeconds(this.store.current_track?.duration);
-      if (!dur) return 0;
-      return Math.min(100, (this.currentTime / dur) * 100);
+      if (!this.duration) return 0;
+      return Math.min(100, (this.currentTime / this.duration) * 100);
     }
   },
   watch: {
-    'store.current_index'() { this.resetProgress(); },
+    'store.current_index'() {
+      this.loadTrack();
+    },
     'store.is_playing'(val) {
-      if (val) this.startProgress(); else this.stopProgress();
+      const audio = this.$refs.audio;
+      if (!audio || !audio.src) return;
+      if (val) {
+        audio.play().catch(() => {});
+      } else {
+        audio.pause();
+      }
     }
   },
   mounted() {
-    if (this.store.is_playing) this.startProgress();
-  },
-  beforeUnmount() {
-    this.stopProgress();
+    const audio = this.$refs.audio;
+    audio.addEventListener('timeupdate', () => {
+      if (!this.seeking) {
+        this.currentTime = audio.currentTime;
+      }
+    });
+    audio.addEventListener('loadedmetadata', () => {
+      this.duration = audio.duration;
+    });
+    audio.addEventListener('ended', () => {
+      this.store.next();
+    });
+    audio.addEventListener('error', () => {
+      console.warn('Audio load error, trying next track');
+    });
+
+    this.loadTrack();
   },
   methods: {
-    startProgress() {
-      this.stopProgress();
-      this.progressTimer = setInterval(() => {
-        const dur = this.parseSeconds(this.store.current_track?.duration);
-        if (dur && this.currentTime >= dur) {
-          this.store.next();
-        } else {
-          this.currentTime += 0.25;
+    loadTrack() {
+      const audio = this.$refs.audio;
+      const track = this.store.current_track;
+      if (!audio || !track) return;
+
+      const url = track.preview_url;
+      if (url) {
+        audio.src = url;
+        audio.load();
+        if (this.store.is_playing) {
+          audio.play().catch(() => {});
         }
-      }, 250);
-    },
-    stopProgress() {
-      if (this.progressTimer) { clearInterval(this.progressTimer); this.progressTimer = null; }
-    },
-    resetProgress() {
+      }
       this.currentTime = 0;
-      if (this.store.is_playing) this.startProgress();
+      this.duration = 0;
     },
     seekProgress(e) {
       const rect = e.currentTarget.querySelector('.player-progress-track');
-      if (!rect) return;
+      if (!rect || !this.duration) return;
       const x = e.clientX - rect.getBoundingClientRect().left;
-      const pct = x / rect.offsetWidth;
-      const dur = this.parseSeconds(this.store.current_track?.duration);
-      if (dur) this.currentTime = Math.round(pct * dur);
-    },
-    parseSeconds(dur) {
-      if (!dur) return 0;
-      const parts = dur.split(':').map(Number);
-      if (parts.length === 2) return parts[0] * 60 + parts[1];
-      return 0;
+      const pct = Math.max(0, Math.min(1, x / rect.offsetWidth));
+      const time = pct * this.duration;
+      this.seeking = true;
+      this.currentTime = time;
+      this.$refs.audio.currentTime = time;
+      this.seeking = false;
     },
     formatTime(sec) {
+      if (!sec || isNaN(sec)) return '0:00';
       const m = Math.floor(sec / 60);
       const s = Math.floor(sec % 60);
       return m + ':' + String(s).padStart(2, '0');
@@ -149,6 +168,8 @@ export default {
   border-top: 1px solid var(--color-border);
   z-index: 200;
 }
+
+audio { display: none; }
 
 /* ---- 收起态 ---- */
 .player-bar-collapsed {
@@ -206,7 +227,7 @@ export default {
   height: 100%; background: var(--color-accent); transition: width 0.25s linear;
 }
 .player-progress-time {
-  font-size: 0.65rem; color: var(--color-text-dim); flex-shrink: 0; min-width: 60px; text-align: right;
+  font-size: 0.65rem; color: var(--color-text-dim); flex-shrink: 0; min-width: 80px; text-align: right;
 }
 
 /* ---- 展开态 ---- */

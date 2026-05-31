@@ -20,12 +20,13 @@
               <!-- 顶部行：封面 + 社团信息 -->
               <div class="top-row">
                 <div class="cover">
-                  <img :src="album.cover_url" :alt="album.title" />
+                  <img v-if="album.cover_url" :src="album.cover_url" :alt="album.title" />
+                  <div v-else class="cover-placeholder"><i class="fas fa-compact-disc"></i></div>
                 </div>
 
                 <!-- 社团信息卡片 -->
                 <div class="circle-card" v-if="circleDetail">
-                  <div class="circle-header">
+                  <div class="circle-header" @click="goToCircle">
                     <img :src="circleDetail.logo_url" :alt="circleDetail.name" class="circle-logo" />
                     <h3 class="circle-name">{{ circleDetail.name }}</h3>
                   </div>
@@ -54,8 +55,9 @@
                   >{{ isFavorited ? '★' : '☆' }}</button>
                 </div>
 
-                <div class="desc" v-if="album.info_content">
-                  <p>{{ album.info_content }}</p>
+                <div class="desc" v-if="cleanText(album.info_title) || cleanText(album.info_content)">
+                  <p class="desc-title" v-if="cleanText(album.info_title)">{{ cleanText(album.info_title) }}</p>
+                  <p class="desc-content" v-if="cleanText(album.info_content)">{{ cleanText(album.info_content) }}</p>
                 </div>
 
                 <!-- 标签 -->
@@ -68,33 +70,18 @@
                   >#{{ tag.name }}</span>
                 </div>
 
-                <!-- 曲目列表（可播放） -->
-                <div class="section" v-if="album.tracks && album.tracks.length">
-                  <h3>曲目列表</h3>
-                  <div class="tracks">
-                    <div
-                      v-for="(item, idx) in album.tracks"
-                      :key="item.file_id"
-                      class="track"
-                      :class="{ active: currentTrackId === item.file_id && isPlaying }"
-                      @click="handleTrackClick(album.tracks, idx)"
-                    >
-                      <div class="track-num">{{ String(idx + 1).padStart(2, '0') }}</div>
-                      <div class="track-body">
-                        <div class="t-name">{{ item.file_name }}</div>
-                      </div>
-                      <div class="track-dur">{{ item.duration || '--:--' }}</div>
-                      <button class="track-play-btn" @click.stop="handleTrackClick(album.tracks, idx)">
-                        <i :class="getTrackIcon(item)"></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
                 <!-- 发布信息 -->
                 <div class="meta" v-if="album.publish_date">
                   发布于 {{ album.publish_date }}
                 </div>
+
+                <!-- 曲目列表（可播放） -->
+                <TrackList
+                  v-if="album.tracks && album.tracks.length"
+                  :tracks="album.tracks"
+                  class="section"
+                  @preview="handleTrackClick"
+                />
               </div>
             </div>
 
@@ -103,32 +90,26 @@
               <!-- 购买卡片 -->
               <div class="side-card buy-card">
                 <div class="price-row">
-                  <span class="price-num">¥ {{ album.price || '免费' }}</span>
+                  <span class="price-num" v-if="album.price > 0">¥ {{ album.price }}</span>
                   <span class="price-label free" v-else>免费下载</span>
                 </div>
                 <button class="buy-btn" @click="handleBuy">
                   {{ album.price > 0 ? '立即购买' : '免费下载' }}
                 </button>
                 <ul class="buy-info">
-                  <li>高品质 MP3 下载</li>
-                  <li>无损 FLAC 下载</li>
                   <li>全曲在线串流试听</li>
                 </ul>
               </div>
 
               <!-- 评论卡片 -->
-              <div class="side-card comment-card">
-                <h3>短评</h3>
-                <div class="comments">
-                  <div v-if="!album.comments || album.comments.length === 0" class="no-comments">暂无评论</div>
-                  <div v-for="c in album.comments" :key="c.comment_id" class="comment">
-                    <div class="comment-header">
-                      <span class="comment-user">{{ c.username || '用户 ' + c.user_id }}</span>
-                      <span class="comment-time">{{ c.created_at }}</span>
-                    </div>
-                    <p class="comment-body">{{ c.content }}</p>
-                  </div>
-                </div>
+              <div class="side-card comment-card" ref="commentCard">
+                <CommentSection
+                  :comments="comments"
+                  :total="commentsTotal"
+                  :loading="commentsLoading"
+                  :show-form="false"
+                  @load-more="loadMoreComments"
+                />
               </div>
             </div>
           </div>
@@ -160,9 +141,63 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { fetchAlbum, fetchAlbums, fetchCircle } from '../api/mock.js'
+import { fetchAlbum, fetchAlbums, fetchCircle } from '../api'
 import { usePlayerStore } from '../stores/player.js'
 import { useFavoriteStore } from '../stores/favorite.js'
+import TrackList from '../components/organisms/TrackList.vue'
+import CommentSection from '../components/organisms/CommentSection.vue'
+
+// 清洗爬虫抓取的页面噪音
+const BOILERPLATE = [
+  '提供高品质MP3和无损FLAC格式下载',
+  '完整歌曲在线串流',
+  '包含实体物品',
+  '这个商品需要一个邮寄地址',
+  '购买完成后请添加主理人微信',
+  '喜欢《',
+  '您可以使用BOOST',
+  '您可以支付',
+  '购买',
+  '最少需要',
+  '元',
+  '在您购买这个商品之后',
+  '折扣码',
+  '兑换的商品无法使用折扣码',
+  '短评',
+  '和……相似的作品',
+  'OrganicNight',
+  '@dizzylab',
+  '收件人',
+  '手机号',
+  '收货地址',
+  '附言',
+  'BOOST',
+  '在声音中寻找本真',
+  '粤网文',
+  '节目制作经营许可证',
+  'Links',
+]
+
+function cleanText(text) {
+  if (!text) return ''
+  // 移除损坏的 Unicode 字符
+  let cleaned = text.replace(/[\udc00-\udfff]/g, '')
+  // 按行过滤
+  const lines = cleaned.split('\n').filter(line => {
+    const l = line.trim()
+    if (!l) return false
+    // 跳过纯数字行、百分比、日期行
+    if (/^\d+%$/.test(l)) return false
+    if (/^发布于?\d{4}年/.test(l)) return false
+    if (/^发布于/.test(l)) return false
+    // 跳过包含噪音关键词的行
+    for (const bp of BOILERPLATE) {
+      if (l.includes(bp)) return false
+    }
+    return true
+  })
+  return lines.join('\n').trim()
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -173,10 +208,10 @@ const album = ref(null)
 const loading = ref(true)
 const recommendList = ref([])
 const circleDetail = ref(null)
-
-// 播放状态（用于曲目列表高亮）
-const currentTrackId = computed(() => player.current_track?.file_id ?? null)
-const isPlaying = computed(() => player.is_playing)
+const comments = ref([])
+const commentsTotal = ref(0)
+const commentsPage = ref(1)
+const commentsLoading = ref(false)
 
 // 收藏状态
 const isFavorited = computed(() => album.value ? favorite.isFavorite(album.value.album_id) : false)
@@ -191,6 +226,18 @@ async function loadAlbum() {
   try {
     const id = route.params.id
     album.value = await fetchAlbum(id)
+
+    // 初始化评论（详情页返回前 5 条）
+    comments.value = album.value.comments || []
+    commentsTotal.value = comments.value.length // 初始值，后续可能更大
+    commentsPage.value = 1
+    // 如果返回了 5 条，说明可能还有更多，获取总数
+    if (comments.value.length === 5) {
+      try {
+        const res = await fetch(`/api/albums/${id}/comments?page=1&page_size=5`).then(r => r.json())
+        commentsTotal.value = res.total
+      } catch { /* ignore */ }
+    }
 
     // 加载社团详情
     if (album.value?.circle?.circle_id) {
@@ -215,6 +262,22 @@ async function loadAlbum() {
   }
 }
 
+async function loadMoreComments() {
+  if (commentsLoading.value) return
+  commentsLoading.value = true
+  try {
+    commentsPage.value++
+    const res = await fetch(`/api/albums/${album.value.album_id}/comments?page=${commentsPage.value}&page_size=5`).then(r => r.json())
+    comments.value.push(...res.data)
+    commentsTotal.value = res.total
+  } catch (e) {
+    console.error('加载评论失败:', e)
+    commentsPage.value--
+  } finally {
+    commentsLoading.value = false
+  }
+}
+
 function goToCircle() {
   if (album.value?.circle) {
     router.push(`/label/${album.value.circle.circle_id}`)
@@ -229,19 +292,17 @@ function goToAlbum(item) {
   router.push(`/album/${item.album_id}`)
 }
 
-// 曲目点击播放
+// 曲目点击播放（TrackList emit 的 preview 事件）
 function handleTrackClick(tracks, startIndex) {
   const previewTracks = tracks.filter(t => t.file_type === 'preview')
   if (previewTracks.length === 0) return
 
-  // 计算 startIndex 在 preview 列表中的位置
   const clickedTrack = tracks[startIndex]
   const previewIndex = previewTracks.findIndex(t => t.file_id === clickedTrack.file_id)
 
   if (previewIndex >= 0) {
     player.playAlbumTracks(tracks, previewIndex)
   } else {
-    // 点击的是 full 曲目，找下一个可播放的 preview 曲目
     const nextPreviewIdx = previewTracks.findIndex(t => {
       const origIdx = tracks.findIndex(tt => tt.file_id === t.file_id)
       return origIdx > startIndex
@@ -250,13 +311,6 @@ function handleTrackClick(tracks, startIndex) {
       player.playAlbumTracks(tracks, nextPreviewIdx)
     }
   }
-}
-
-// 获取曲目播放图标
-function getTrackIcon(track) {
-  if (track.file_type !== 'preview') return 'fas fa-lock'
-  if (currentTrackId.value === track.file_id && isPlaying.value) return 'fas fa-volume-up'
-  return 'fas fa-play'
 }
 
 function handleBuy() {
@@ -366,13 +420,22 @@ onMounted(() => {
   object-fit: cover;
   display: block;
 }
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a1a;
+  color: #555;
+  font-size: 4rem;
+}
 
 /* 社团信息卡片 */
 .circle-card {
   flex: 1;
   min-width: 0;
   background: #0a0a0a;
-  border: 1px solid #222;
   padding: 24px;
 }
 
@@ -381,6 +444,11 @@ onMounted(() => {
   align-items: center;
   gap: 16px;
   margin-bottom: 16px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.circle-header:hover .circle-name {
+  color: #ff6b6b;
 }
 
 .circle-logo {
@@ -389,6 +457,10 @@ onMounted(() => {
   object-fit: cover;
   border: 1px solid #333;
   flex-shrink: 0;
+  transition: transform 0.25s;
+}
+.circle-header:hover .circle-logo {
+  transform: scale(1.15);
 }
 
 .circle-name {
@@ -489,10 +561,22 @@ onMounted(() => {
 }
 
 .desc {
-  font-size: 14px;
-  color: #bbb;
-  line-height: 1.8;
   margin-bottom: 18px;
+}
+.desc-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #eee;
+  line-height: 1.8;
+  margin-bottom: 8px;
+  white-space: pre-line;
+}
+.desc-content {
+  font-size: 14px;
+  font-weight: 300;
+  color: #aaa;
+  line-height: 1.8;
+  white-space: pre-line;
 }
 
 /* 标签 */
@@ -518,91 +602,6 @@ onMounted(() => {
 .section {
   margin-bottom: 32px;
 }
-.section h3 {
-  font-size: 15px;
-  font-weight: 600;
-  color: #ff6b6b;
-  margin-bottom: 12px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #222;
-}
-
-/* 曲目列表（可播放） */
-.track {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid #1a1a1a;
-  transition: background 0.15s;
-  cursor: pointer;
-}
-.track:hover {
-  background: #111;
-}
-.track.active {
-  background: rgba(255, 107, 107, 0.08);
-  border-left: 3px solid #ff6b6b;
-  padding-left: 9px;
-}
-.track:last-child {
-  border-bottom: none;
-}
-.track-num {
-  flex-shrink: 0;
-  width: 28px;
-  font-size: 12px;
-  color: #555;
-  text-align: right;
-}
-.track.active .track-num {
-  color: #ff6b6b;
-}
-.track-body {
-  flex: 1;
-  min-width: 0;
-}
-.t-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #eee;
-}
-.track.active .t-name {
-  color: #ff6b6b;
-}
-.track-dur {
-  flex-shrink: 0;
-  font-size: 12px;
-  color: #555;
-}
-
-.track-play-btn {
-  flex-shrink: 0;
-  background: none;
-  border: 1px solid #333;
-  color: #777;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  opacity: 0;
-}
-.track:hover .track-play-btn,
-.track.active .track-play-btn {
-  opacity: 1;
-}
-.track-play-btn:hover {
-  border-color: #ff6b6b;
-  color: #ff6b6b;
-}
-.track.active .track-play-btn {
-  border-color: #ff6b6b;
-  color: #ff6b6b;
-  opacity: 1;
-}
 
 /* 发布信息 */
 .meta {
@@ -615,6 +614,8 @@ onMounted(() => {
 .right {
   width: 300px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .side-card {
@@ -622,6 +623,15 @@ onMounted(() => {
   border: 1px solid #222;
   padding: 20px;
   margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.comment-card {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 购买卡片 */
@@ -671,48 +681,6 @@ onMounted(() => {
 .buy-info li {
   margin-bottom: 4px;
   padding-left: 8px;
-}
-
-/* 评论卡片 */
-.comment-card h3 {
-  font-size: 14px;
-  font-weight: 600;
-  color: #ff6b6b;
-  margin-bottom: 12px;
-}
-
-.comment {
-  padding: 10px 0;
-  border-bottom: 1px solid #222;
-}
-.comment:last-child {
-  border-bottom: none;
-}
-.comment:first-child {
-  padding-top: 0;
-}
-.comment-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 4px;
-}
-.comment-user {
-  font-size: 12px;
-  font-weight: 600;
-  color: #ddd;
-}
-.comment-time {
-  font-size: 11px;
-  color: #555;
-}
-.comment-body {
-  font-size: 13px;
-  color: #aaa;
-  line-height: 1.5;
-}
-.no-comments {
-  font-size: 12px;
-  color: #666;
 }
 
 /* 推荐作品 */

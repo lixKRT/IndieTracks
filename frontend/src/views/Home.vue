@@ -19,13 +19,13 @@
       <AlbumGrid
         :albums="albums"
         :loading="loading"
-        :showAll="showAll"
-        :maxVisible="maxVisible"
+        :loadingMore="loadingMore"
+        :hasMore="albums.length < totalAlbums"
         @album-click="goToAlbum"
         @circle-click="goToCircle"
         @tag-click="filterByTag"
         @preview="handlePreview"
-        @view-all="showAll = true"
+        @load-more="loadMore"
       />
     </section>
 
@@ -61,7 +61,7 @@
 <script>
 import AlbumGrid from '../components/organisms/AlbumGrid.vue';
 import HeroSection from '../components/organisms/HeroSection.vue';
-import { fetchAlbums, fetchCircles, fetchAlbum } from '../api/mock.js';
+import { fetchAlbums, fetchCircles, fetchAlbum } from '../api';
 import { usePlayerStore } from '../stores/player.js';
 
 export default {
@@ -71,18 +71,21 @@ export default {
     return {
       albums: [],
       loading: true,
-      showAll: false,
-      maxVisible: 6,
+      loadingMore: false,
+      page: 1,
+      pageSize: 12,
       totalAlbums: 0,
       featuredCircles: [],
-      circlesCount: 0
+      circlesCount: 0,
+      displayAlbums: 0,
+      displayCircles: 0
     };
   },
   computed: {
     heroStats() {
       return [
-        { value: `${this.totalAlbums}+`, label: '张专辑' },
-        { value: this.circlesCount, label: '个社团' },
+        { value: `${this.displayAlbums}+`, label: '张专辑' },
+        { value: this.displayCircles, label: '个社团' },
         { value: '100%', label: '免费试听' }
       ];
     }
@@ -94,19 +97,46 @@ export default {
     async loadData() {
       this.loading = true;
       try {
-        // 加载专辑列表（取前12张用于最新区域）
-        const albumResult = await fetchAlbums({ page_size: 12 });
+        const albumResult = await fetchAlbums({ page: 1, page_size: this.pageSize });
         this.albums = albumResult.data;
         this.totalAlbums = albumResult.total;
+        this.page = 1;
 
-        // 加载社团列表（用于热门社团展示）
         const circleResult = await fetchCircles();
         this.featuredCircles = circleResult.data.slice(0, 4);
         this.circlesCount = circleResult.data.length;
+
+        this.animateCount('displayAlbums', this.totalAlbums, 1200);
+        this.animateCount('displayCircles', this.circlesCount, 1000);
       } catch (e) {
         console.error('加载首页数据失败:', e);
       } finally {
         this.loading = false;
+      }
+    },
+    animateCount(field, target, duration) {
+      const start = performance.now();
+      const step = (now) => {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+        this[field] = Math.round(ease * target);
+        if (progress < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    },
+    async loadMore() {
+      if (this.loadingMore || this.albums.length >= this.totalAlbums) return;
+      this.loadingMore = true;
+      try {
+        this.page++;
+        const result = await fetchAlbums({ page: this.page, page_size: this.pageSize });
+        this.albums.push(...result.data);
+      } catch (e) {
+        console.error('加载更多失败:', e);
+        this.page--;
+      } finally {
+        this.loadingMore = false;
       }
     },
     goToAlbum(album) {
@@ -212,10 +242,8 @@ export default {
   transition: all 0.25s;
 }
 
-.circle-card-horizontal:hover {
-  transform: translateY(-4px);
-  border-color: var(--color-accent);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+.circle-card-horizontal {
+  cursor: pointer;
 }
 
 .circle-avatar {

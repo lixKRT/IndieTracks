@@ -15,7 +15,7 @@ python setup_db.py                       # 执行 database/create_database.sql
 scrapy crawl album_test                  # 测试爬虫（10 张专辑，调试用）
 scrapy crawl album_bulk                  # 批量爬虫（遵守 spider.json）
 scrapy crawl album_incremental           # 增量爬虫（永远增量，不受 spider.json 控制）
-scrapy crawl circle_members              # 社团成员爬虫
+scrapy crawl circle                      # 社团爬虫（描述+logo+成员）
 scrapy crawl user_roles                  # 用户角色爬虫 /setup
 scrapy crawl user_pages                  # 用户维页面（DB 读取，默认 20 人）
 scrapy crawl user_pages -a user_ids=2,3  # 用户维页面（指定用户）
@@ -30,7 +30,7 @@ scrapy crawl user_pages -a user_ids=2,3  # 用户维页面（指定用户）
 | `delay.json` | 延迟策略 | `download_delay`, `between_albums_min/random`, `between_tracks_min/random_max` |
 | `minio.json` | MinIO 连接 | endpoint/access_key/secret_key/bucket/prefixes |
 
-**spider.json 适用范围：** `album_bulk`, `circle_members`, `user_roles`, `user_pages`
+**spider.json 适用范围：** `album_bulk`, `circle`, `user_roles`, `user_pages`
 **例外：** `album_incremental`（永远增量+不限额）、`album_test`（固定 10 张）
 
 ## 项目结构
@@ -51,14 +51,15 @@ crawler/
 │   │   ├── constants.py      # BASE, API_DISCS, PAGE_SIZE, TRACK_RE
 │   │   ├── db.py             # get_connection(), close_connection()
 │   │   ├── delay.py          # between_albums_sleep(), between_tracks_sleep()
-│   │   ├── minio.py          # download_and_upload() — CDN 下载 + MinIO 上传
+│   │   ├── circle.py         # extract_circle_info(), yield_circle_members() — 社团详情解析
+│   │   ├── minio.py          # download_image/download_and_upload() — CDN 下载 + MinIO 上传
 │   │   └── parsing.py        # extract_user_id, parse_date_cn, parse_track_title, safe_json_load, check_response_ok
 │   └── spiders/
 │       ├── album_base.py         # 专辑爬虫基类（共享 parse 方法 + _album_is_complete）
 │       ├── album_test.py         # 测试爬虫（10 张专辑）
 │       ├── album_bulk.py         # 批量爬虫（reactor.callLater 非阻塞延迟）
 │       ├── album_incremental.py  # 增量爬虫（遇完整专辑即停）
-│       ├── circle_members.py     # 社团成员（member_count 精确跳过 + reactor 延迟）
+│       ├── circle.py             # 社团（描述+logo+成员ID）（member_count 精确跳过 + reactor 延迟）
 │       ├── user_roles.py         # STAFF/PRO 角色
 │       └── user_pages.py         # 用户已购/收藏/关注社团
 ├── tool/
@@ -110,11 +111,13 @@ _after_album_detail → reactor.callLater(wait, _schedule_next) ← 不阻塞 re
 - 遇到第一条 **数据完整**（info_title IS NOT NULL）的专辑立即停止
 - 永远增量+不限额，不受 spider.json 控制
 
-### circle_members — 社团成员
+### circle — 社团爬虫
 
 - 队列驱动 + reactor.callLater 延迟（不阻塞引擎）
 - `full`: 全部重爬 / `incremental`: 比较 `circles.member_count` 与 `user_circles` 行数，一致则跳过
-- 爬完后 `UPDATE circles SET member_count = {found}`
+- 抓取社团描述 (`<p id='labeldesp'>`)、logo、成员ID
+- 爬完后 `UPDATE circles SET description, logo_url, member_count`
+- 用户头像由 user_pages.py 负责处理
 
 ### user_roles — 用户角色
 
@@ -159,20 +162,30 @@ _after_album_detail → reactor.callLater(wait, _schedule_next) ← 不阻塞 re
 - `parse_disc_list` × 3（album_bulk/incremental/test）— JSON + HTTP
 - `parse_buyers` / `parse_comments`（BaseAlbumSpider）— JSON + HTTP
 - `parse_setup`（user_roles）— HTTP（失败 CloseSpider）
-- `parse_circle_detail`（circle_members）— HTTP（失败跳过，继续下一个）
+- `parse_circle_detail`（circle）— HTTP（失败跳过，继续下一个）
 - `parse_music/likes/following` × 3（user_pages）— HTTP（失败跳过）
 
-## MinIO 音频下载
+## MinIO 文件下载
 
-`utils/minio.py::download_and_upload(cdn_url, album_slug, sort_order)` 在 BaseAlbumSpider.parse_album_detail 中被调用：
+`utils/minio.py` 提供两个函数：
 
-1. `requests.get()` 从 CDN 下载 MP3
-2. `minio.put_object()` 上传到 MinIO
-3. 返回 `(object_key, file_size)` — 失败返回 None 则跳过该曲目
+| 函数 | 用途 | 自动判断前缀 |
+|:---|:---|:---|
+| `download_image(cdn_url)` | 图片（封面/logo/头像） | 根据 URL 路径自动选 covers/logos/avatars |
+| `download_and_upload(cdn_url, album_slug, sort_order)` | 音频试听 | 固定 audio/preview/ |
 
-**命名：** `audio/preview/{album_slug}/{sort_order:03d}.mp3`
+**调用位置：**
+- `album_base.py::parse_album_detail` — 专辑封面 + 社团 logo
+- `album_base.py::parse_buyers` — 用户头像
+- `album_base.py::parse_comments` — 用户头像
+- `user_pages.py::parse_music` — 用户头像
 
-**前置条件：** MinIO 服务必须先启动（`scripts/windows/setup-minio.bat`）。
+**URL 前缀自动识别：**
+- `/media/cover/` → `covers/`
+- `/media/label_cover/` → `logos/`
+- `/media/avatars/` → `avatars/`
+
+**前置条件：** MinIO 服务必须先启动（`scripts/windows/setup-minio.py`）。
 
 ## 数据库
 
@@ -206,7 +219,7 @@ psql -U postgres -d indietracks -f database/init.sql              # 清空数据
 |:---|:---|:---|:---|
 | 1 | `album_bulk`（full, max=50） | MinIO 已启动 | 首批数据铺底 + 音频下载 |
 | 2 | `album_incremental` | 首期数据已有 | 日常追新 |
-| 3 | `circle_members` | circles 表有数据 | 社团成员补充 |
+| 3 | `circle` | circles 表有数据 | 社团描述+logo+成员 |
 | 4 | `user_roles` | users 表有数据 | 角色标记 |
 | 5 | `user_pages` | users/albums/circles 有数据 | 用户已购/收藏/关注 |
 | 6 | `album_bulk`（full, max=0） | MinIO 已启动 | 最终全量刷新 |

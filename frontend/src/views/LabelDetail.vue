@@ -19,6 +19,14 @@
               <span><i class="fas fa-compact-disc"></i> {{ circle.albums.length }} 张专辑</span>
               <span><i class="fas fa-user-friends"></i> {{ circle.members.length }} 名成员</span>
             </div>
+            <div class="circle-tags" v-if="circle.representative_tags && circle.representative_tags.length">
+              <span
+                v-for="tag in circle.representative_tags"
+                :key="tag"
+                class="tag"
+                @click.stop="$router.push({ path: '/tag', query: { tag } })"
+              >#{{ tag }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -60,7 +68,7 @@
 </template>
 
 <script>
-import { fetchCircle, fetchAlbum } from '../api/mock.js';
+import { fetchCircle, fetchAlbum } from '../api';
 import { usePlayerStore } from '../stores/player.js';
 import AlbumCard from '../components/molecules/AlbumCard.vue';
 
@@ -139,7 +147,6 @@ export default {
   width: 140px;
   height: 140px;
   overflow: hidden;
-  border: 2px solid var(--color-border);
   transition: transform 0.3s;
 }
 
@@ -185,6 +192,26 @@ export default {
   margin-right: 6px;
   width: 16px;
   color: var(--color-accent);
+}
+
+.circle-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 12px;
+}
+
+.tag {
+  background: linear-gradient(135deg, rgba(255,107,107,0.12), rgba(255,107,107,0.05));
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tag:hover {
+  background: rgba(255, 107, 107, 0.2);
 }
 
 /* 公用 section */

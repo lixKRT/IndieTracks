@@ -71,7 +71,7 @@
 </template>
 
 <script>
-import { fetchCircles } from '../api/mock.js';
+import { fetchCircles } from '../api';
 
 export default {
   name: 'LabelsView',
@@ -156,7 +156,7 @@ export default {
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.3s ease, border-color 0.2s;
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -166,7 +166,6 @@ export default {
 .circle-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 18px 28px -8px rgba(0, 0, 0, 0.4);
-  border-color: var(--color-accent);
 }
 
 .circle-info {

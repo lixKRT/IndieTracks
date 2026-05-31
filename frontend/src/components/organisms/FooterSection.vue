@@ -4,7 +4,7 @@
     <div class="container-wide">
       <div class="footer-content">
         <div class="footer-section">
-          <h3>DIZZYL@B</h3>
+          <h3>IndieTracks</h3>
           <p>独立电子音乐发行平台，专注于高品质电子音乐作品的推广与销售。</p>
         </div>
 

@@ -24,8 +24,8 @@
 - **字段命名**：全链路 snake_case。前端 Mock 数据 = 数据库列名 = 后端 JSON key
 - **视觉风格**：暗色扁平（背景 `#0a0a0a`，主色 `#ff6b6b`）
 - **前端**：Vue 3 + Vite 8 + Vue Router 4 + Axios + Pinia
-- **后端**：Spring Boot 4 + Java 25 + JPA + Undertow
-- **数据层**：PostgreSQL 18 + MinIO 对象存储
+- **后端**：Spring Boot 4 + Java 25 + MyBatis-Plus + Undertow
+- **数据层**：PostgreSQL 18 + MinIO 对象存储（预签名 URL）
 - **爬虫**：Scrapy，目标站 Dizzylab
 
 ### Dizzylab 目标页面
@@ -58,11 +58,11 @@ molecules → organisms → layouts → views
 
 | 路由 | 状态 |
 |:---|:---|
-| `/` 首页 | ✅ P2 完成 |
-| `/album/:id` 专辑详情 | 🔨 P3 进行中 |
-| `/labels` 社团列表 | ⬜ P5 |
-| `/label/:id` 社团详情 | ⬜ P5 |
-| `/tag` 分类浏览 | ⬜ P6 |
+| `/` 首页 | ✅ Mock 完成 |
+| `/album/:id` 专辑详情 | ✅ Mock 完成 |
+| `/labels` 社团列表 | ✅ Mock 完成 |
+| `/label/:id` 社团详情 | ✅ Mock 完成 |
+| `/tag` 分类浏览 | ✅ Mock 完成 |
 | `/user/:id` 用户页 | ⬜ 后期 |
 
 ### Pinia Store

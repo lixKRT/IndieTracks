@@ -85,14 +85,14 @@ def main():
             env={**__import__("os").environ, "MINIO_ROOT_USER": ROOT_USER, "MINIO_ROOT_PASSWORD": ROOT_PASS},
             creationflags=subprocess.CREATE_NO_WINDOW,
         )
-        print("  Waiting for MinIO to start (max 30s)...")
-        for i in range(30):
+        print("  Waiting for MinIO to start (max 10s)...")
+        for i in range(10):
             time.sleep(1)
             if check_minio():
                 print(f"  MinIO started after {i + 1}s")
                 break
         else:
-            print("  [WARN] MinIO did not start within 30s, proceeding anyway...")
+            print("  [WARN] MinIO did not start within 10s, proceeding anyway...")
     print()
 
     # ── [4/5] Configure bucket + access key ──────────

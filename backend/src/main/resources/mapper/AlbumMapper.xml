@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.indietracks.backend.mapper.AlbumMapper">
+
+    <!-- 公共 SQL 片段 -->
+    <sql id="albumColumns">
+        a.album_id, a.title, ac.circle_id, c.name AS circle_name, c.logo_url AS circle_logo_url,
+        a.cover_url, a.info_title, a.info_content, a.price, a.publish_date,
+        COALESCE(t.tag_list, '{}') AS tags,
+        COALESCE(wf.track_count, 0) AS track_count
+    </sql>
+
+    <sql id="tagsSubquery">
+        LEFT JOIN LATERAL (
+            SELECT array_agg(t2.name ORDER BY t2.tag_id) AS tag_list
+            FROM album_tags at2
+            JOIN tags t2 ON at2.tag_id = t2.tag_id
+            WHERE at2.album_id = a.album_id
+        ) t ON true
+    </sql>
+
+    <sql id="trackCountSubquery">
+        LEFT JOIN LATERAL (
+            SELECT COUNT(*) AS track_count
+            FROM work_files wf2
+            WHERE wf2.album_id = a.album_id
+        ) wf ON true
+    </sql>
+
+    <!-- 专辑列表：分页 + 筛选 + 排序 -->
+    <select id="selectAlbumList" resultType="com.indietracks.backend.dto.AlbumListItem">
+        SELECT <include refid="albumColumns"/>
+        FROM albums a
+        LEFT JOIN album_circles ac ON a.album_id = ac.album_id
+        LEFT JOIN circles c ON ac.circle_id = c.circle_id
+        <include refid="tagsSubquery"/>
+        <include refid="trackCountSubquery"/>
+        <where>
+            AND (a.info_title IS NOT NULL OR a.info_content IS NOT NULL)
+            <if test="tag != null and tag != ''">
+                AND EXISTS (
+                    SELECT 1 FROM album_tags at3
+                    JOIN tags t3 ON at3.tag_id = t3.tag_id
+                    WHERE at3.album_id = a.album_id AND t3.name = #{tag}
+                )
+            </if>
+            <if test="search != null and search != ''">
+                AND (a.title ILIKE '%' || #{search} || '%'
+                    OR c.name ILIKE '%' || #{search} || '%')
+            </if>
+            <if test="price == 'free'">
+                AND a.price = 0
+            </if>
+            <if test="price == 'paid'">
+                AND a.price > 0
+            </if>
+        </where>
+        <choose>
+            <when test="sort == 'publish_date_asc'">ORDER BY a.publish_date ASC</when>
+            <when test="sort == 'price_desc'">ORDER BY a.price DESC</when>
+            <when test="sort == 'price_asc'">ORDER BY a.price ASC</when>
+            <otherwise>ORDER BY a.publish_date DESC</otherwise>
+        </choose>
+    </select>
+
+    <!-- 社团下的专辑列表 -->
+    <select id="selectAlbumsByCircleId" resultType="com.indietracks.backend.dto.AlbumListItem">
+        SELECT <include refid="albumColumns"/>
+        FROM albums a
+        JOIN album_circles ac ON a.album_id = ac.album_id
+        JOIN circles c ON ac.circle_id = c.circle_id
+        <include refid="tagsSubquery"/>
+        <include refid="trackCountSubquery"/>
+        WHERE ac.circle_id = #{circle_id}
+        ORDER BY a.publish_date DESC
+    </select>
+
+    <!-- 批量查询多个社团的专辑 -->
+    <select id="selectAlbumsByCircleIds" resultType="com.indietracks.backend.dto.AlbumListItem">
+        SELECT <include refid="albumColumns"/>
+        FROM albums a
+        JOIN album_circles ac ON a.album_id = ac.album_id
+        JOIN circles c ON ac.circle_id = c.circle_id
+        <include refid="tagsSubquery"/>
+        <include refid="trackCountSubquery"/>
+        WHERE ac.circle_id IN
+        <foreach collection="circleIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY a.publish_date DESC
+    </select>
+
+    <!-- 专辑所属社团 -->
+    <select id="selectCircleByAlbumId" resultType="com.indietracks.backend.dto.AlbumDetail$AlbumCircleInfo">
+        SELECT c.circle_id, c.name, c.logo_url
+        FROM circles c
+        JOIN album_circles ac ON c.circle_id = ac.circle_id
+        WHERE ac.album_id = #{album_id}
+        LIMIT 1
+    </select>
+
+    <!-- 专辑标签 -->
+    <select id="selectTagsByAlbumId" resultType="com.indietracks.backend.dto.AlbumDetail$TagInfo">
+        SELECT t.tag_id, t.name
+        FROM tags t
+        JOIN album_tags at ON t.tag_id = at.tag_id
+        WHERE at.album_id = #{album_id}
+        ORDER BY t.tag_id
+    </select>
+
+    <!-- 专辑曲目 -->
+    <select id="selectTracksByAlbumId" resultType="com.indietracks.backend.dto.AlbumDetail$TrackInfo">
+        SELECT file_id, file_name, track_length, sort_order, file_type
+        FROM work_files
+        WHERE album_id = #{album_id}
+        ORDER BY sort_order
+    </select>
+
+    <!-- 专辑评论（全部，详情页用） -->
+    <select id="selectCommentsByAlbumId" resultType="com.indietracks.backend.dto.AlbumDetail$CommentInfo">
+        SELECT
+            cm.comment_id,
+            u.username,
+            u.avatar_url,
+            cm.content,
+            cm.created_at
+        FROM comments cm
+        LEFT JOIN users u ON cm.user_id = u.user_id
+        WHERE cm.album_id = #{album_id}
+        ORDER BY cm.created_at DESC
+    </select>
+
+    <!-- 专辑评论（分页） -->
+    <select id="selectCommentsPage" resultType="com.indietracks.backend.dto.AlbumDetail$CommentInfo">
+        SELECT
+            cm.comment_id,
+            u.username,
+            u.avatar_url,
+            cm.content,
+            cm.created_at
+        FROM comments cm
+        LEFT JOIN users u ON cm.user_id = u.user_id
+        WHERE cm.album_id = #{album_id}
+        ORDER BY cm.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 专辑评论总数 -->
+    <select id="countCommentsByAlbumId" resultType="int">
+        SELECT COUNT(*) FROM comments WHERE album_id = #{album_id}
+    </select>
+
+</mapper>

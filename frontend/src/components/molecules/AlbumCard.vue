@@ -3,7 +3,8 @@
   <div class="album-card">
     <div class="card-top">
       <div class="card-cover" @click="$emit('album-click', album)">
-        <img :src="album.cover_url" :alt="album.title" class="cover-img">
+        <img v-if="album.cover_url" :src="album.cover_url" :alt="album.title" class="cover-img">
+        <div v-else class="cover-placeholder"><i class="fas fa-compact-disc"></i></div>
         <span v-if="album.price === 0" class="free-badge">免费</span>
       </div>
 
@@ -96,6 +97,17 @@ export default {
   transition: transform 0.4s;
 }
 
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-dim);
+  font-size: 2.5rem;
+}
+
 .card-cover:hover .cover-img { transform: scale(1.05); }
 
 .free-badge {
@@ -116,6 +128,7 @@ export default {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  max-height: 100%;
 }
 
 .info-circle {
@@ -128,8 +141,8 @@ export default {
 }
 
 .circle-logo {
-  width: 28px;
-  height: 28px;
+  width: 100px;
+  height: 100px;
   object-fit: cover;
   flex-shrink: 0;
 }
@@ -137,9 +150,9 @@ export default {
 .circle-name {
   font-size: 0.8rem;
   color: var(--color-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: center;
+  word-break: break-all;
+  line-height: 1.4;
   transition: color var(--transition-fast);
 }
 
@@ -151,8 +164,11 @@ export default {
   line-height: 1.5;
   overflow: hidden;
   display: -webkit-box;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
   flex: 1;
+  min-height: 0;
 }
 
 .card-bottom {
@@ -160,7 +176,7 @@ export default {
 }
 
 .album-title {
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--color-text-primary);
   white-space: nowrap;
@@ -208,17 +224,21 @@ export default {
 
 .album-tags {
   display: flex;
-  flex-wrap: wrap;
   gap: 0.3rem;
   flex: 1;
   min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
 }
+.album-tags::-webkit-scrollbar { display: none; }
 
 .tag {
   font-size: 0.7rem;
   color: var(--color-text-muted);
   background: rgba(255, 255, 255, 0.05);
   padding: 2px 6px;
+  flex-shrink: 0;
   cursor: pointer;
   white-space: nowrap;
   transition: color var(--transition-fast);

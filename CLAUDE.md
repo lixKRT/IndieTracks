@@ -11,8 +11,8 @@ IndieTracks is an indie music showcase and preview platform (reference: dizzylab
 ## Tech Stack
 
 - **Frontend**: Vue 3 + Vite 8 + Vue Router 4 + Pinia + Axios
-- **Backend**: Spring Boot 4 + Java 25 + JPA + Undertow (replaces Tomcat)
-- **Data**: PostgreSQL 18 + MinIO object storage
+- **Backend**: Spring Boot 4 + Java 25 + MyBatis-Plus + Undertow (replaces Tomcat)
+- **Data**: PostgreSQL 18 + MinIO object storage (presigned URLs)
 - **Crawler**: Scrapy (Python 3.13) targeting dizzylab.net
 
 ## Commands
@@ -69,9 +69,9 @@ IndieTracks/
 
 | Route | Phase |
 |-------|-------|
-| `/` Home | P2 Done |
-| `/album/:id` Detail | P3 In Progress |
-| `/labels` Circle list | P5 |
-| `/label/:id` Circle detail | P5 |
-| `/tag` Tag browse | P6 |
+| `/` Home | Mock Done |
+| `/album/:id` Detail | Mock Done |
+| `/labels` Circle list | Mock Done |
+| `/label/:id` Circle detail | Mock Done |
+| `/tag` Tag browse | Mock Done |
 | `/user/:id` User page | Later |

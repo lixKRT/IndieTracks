@@ -3,7 +3,7 @@
   <div class="track-row" :class="{ active: is_current }" @click="$emit('preview', track, index)">
     <span class="track-index">{{ pad(index + 1) }}</span>
     <span class="track-name">{{ track.file_name }}</span>
-    <span class="track-duration">{{ track.duration }}</span>
+    <span class="track-duration">{{ track.track_length }}</span>
     <button class="track-preview-btn" @click="$emit('preview', track, index)">
       <i :class="is_current && playing ? 'fas fa-volume-up' : 'fas fa-play'"></i>
     </button>
@@ -45,9 +45,9 @@ export default {
 
 .track-preview-btn {
   flex-shrink: 0;
-  background: none;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
+  background: rgb(255, 107, 107);
+  border: 1px solid rgb(255, 107, 107);
+  color: #fff;
   width: 32px;
   height: 32px;
   display: flex;
@@ -59,6 +59,6 @@ export default {
 }
 
 .track-row:hover .track-preview-btn { opacity: 1; }
-.track-preview-btn:hover { border-color: var(--color-accent); color: var(--color-accent); opacity: 1; }
-.active .track-preview-btn { border-color: var(--color-accent); color: var(--color-accent); opacity: 1; }
+.track-preview-btn:hover { background: #ff8787; border-color: #ff8787; opacity: 1; }
+.active .track-preview-btn { background: rgb(255, 107, 107); border-color: rgb(255, 107, 107); opacity: 1; }
 </style>

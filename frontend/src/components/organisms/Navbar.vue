@@ -4,7 +4,7 @@
     <div class="container-wide">
       <nav class="navbar">
         <div class="logo">
-          <router-link to="/"><i class="fas fa-wave-square"></i><span>DIZZYL@B</span></router-link>
+          <router-link to="/"><i class="fas fa-wave-square"></i><span>IndieTracks</span></router-link>
         </div>
 
         <button class="hamburger" @click="mobileOpen = !mobileOpen" aria-label="菜单">

@@ -28,6 +28,7 @@ from indietracks_spider.utils.config_loader import (
 from indietracks_spider.utils.constants import BASE
 from indietracks_spider.utils.db import get_connection, close_connection
 from indietracks_spider.utils.parsing import check_response_ok
+from indietracks_spider.utils.minio import download_image
 
 logger = logging.getLogger(__name__)
 
@@ -243,6 +244,23 @@ class UserPagesSpider(scrapy.Spider):
                 pages.add(int(m.group(1)))
         return max(pages) if pages else 1
 
+    # ── 用户头像处理 ─────────────────────────────────
+
+    def _download_user_avatar(self, response, dizzylab_uid: int):
+        """从用户页面提取并下载头像。"""
+        # 用户头像通常在页面顶部的 img 标签中
+        avatar_url = response.xpath("//img[contains(@src,'avatars')]/@src").get("")
+        if avatar_url:
+            avatar_key = download_image(avatar_url)
+            if avatar_key:
+                # 更新用户头像
+                self._ensure_db()
+                self._db_cur.execute(
+                    "UPDATE users SET avatar_url = %s WHERE dizzylab_user_id = %s",
+                    (avatar_key, dizzylab_uid),
+                )
+                self.logger.info("  用户 %d 头像已上传: %s", dizzylab_uid, avatar_key)
+
     # ── Music：已购专辑 ───────────────────────────────
 
     def parse_music(self, response):
@@ -255,6 +273,10 @@ class UserPagesSpider(scrapy.Spider):
         if not user_db_id:
             self.logger.warning("用户 %d 不在 DB 中，跳过 music 解析", dizzylab_uid)
             return
+
+        # 第一页时下载用户头像
+        if current_page == 1:
+            self._download_user_avatar(response, dizzylab_uid)
 
         for slug, title in self._parse_album_cards(response):
             album_id = self._resolve_album_id(slug, title)

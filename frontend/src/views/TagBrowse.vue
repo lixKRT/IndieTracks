@@ -27,7 +27,7 @@
 <script>
 import AlbumGrid from '../components/organisms/AlbumGrid.vue';
 import TagFilter from '../components/organisms/TagFilter.vue';
-import { fetchAlbums, getTags, fetchAlbum } from '../api/mock.js';
+import { fetchAlbums, getTags, fetchAlbum } from '../api';
 import { usePlayerStore } from '../stores/player.js';
 
 export default {
@@ -35,7 +35,7 @@ export default {
   components: { AlbumGrid, TagFilter },
   data() {
     return {
-      allTags: getTags(),
+      allTags: [],
       filterTag: '',
       filterPrice: '',
       albums: [],
@@ -48,6 +48,7 @@ export default {
     '$route.query'() { this.syncFromQuery(); }
   },
   async mounted() {
+    this.allTags = await getTags();
     this.syncFromQuery();
   },
   methods: {

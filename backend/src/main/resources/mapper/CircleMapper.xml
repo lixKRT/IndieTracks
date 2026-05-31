@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.indietracks.backend.mapper.CircleMapper">
+
+    <!-- 社团列表：含 album_count -->
+    <select id="selectCircleList" resultType="com.indietracks.backend.dto.CircleListItem">
+        SELECT
+            c.circle_id,
+            c.name,
+            c.logo_url,
+            c.description,
+            COALESCE(ac.album_count, 0) AS album_count,
+            c.member_count,
+            la.latest_album_date
+        FROM circles c
+        LEFT JOIN LATERAL (
+            SELECT COUNT(*) AS album_count
+            FROM album_circles ac2
+            WHERE ac2.circle_id = c.circle_id
+        ) ac ON true
+        LEFT JOIN LATERAL (
+            SELECT MAX(a.publish_date) AS latest_album_date
+            FROM albums a
+            JOIN album_circles ac3 ON a.album_id = ac3.album_id
+            WHERE ac3.circle_id = c.circle_id
+        ) la ON true
+        ORDER BY c.circle_id
+    </select>
+
+    <!-- 社团成员 -->
+    <select id="selectMembersByCircleId" resultType="com.indietracks.backend.dto.CircleDetail$CircleMember">
+        SELECT u.user_id, u.username, u.avatar_url, u.user_role
+        FROM users u
+        JOIN user_circles uc ON u.user_id = uc.user_id
+        WHERE uc.circle_id = #{circle_id}
+        ORDER BY u.user_id
+    </select>
+
+</mapper>

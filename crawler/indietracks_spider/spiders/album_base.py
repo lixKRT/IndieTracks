@@ -8,6 +8,7 @@ BaseAlbumSpider — 专辑爬虫基类。
 """
 
 import json
+import re
 import logging
 from datetime import datetime
 from urllib.parse import quote
@@ -29,7 +30,8 @@ from indietracks_spider.items import (
 from indietracks_spider.utils.constants import BASE, TRACK_RE
 from indietracks_spider.utils.db import get_connection
 from indietracks_spider.utils.delay import between_tracks_sleep
-from indietracks_spider.utils.minio import download_and_upload
+from indietracks_spider.utils.minio import download_and_upload, download_image
+from indietracks_spider.utils.circle import extract_circle_info, yield_circle_members
 from indietracks_spider.utils.parsing import (
     extract_user_id,
     parse_date_cn,
@@ -92,11 +94,25 @@ class BaseAlbumSpider(scrapy.Spider):
         album["price"] = float(disc.get("price", 0))
         album["cover_url"] = disc.get("cover", "")
 
-        paragraphs = response.xpath("//p/text()").getall()
-        album["info_title"] = "\n".join(p.strip() for p in paragraphs if p.strip())
+        # info_title: 专辑介绍段落（<p class="text-left" style="margin-top:32px">）
+        info_p = response.xpath("//p[@class='text-left' and contains(@style,'margin-top:32px')]")
+        if info_p:
+            raw_html = info_p[0].get()
+            text = re.sub(r'<br\s*/?>', '\n', raw_html)
+            text = re.sub(r'<[^>]+>', '', text)
+            album["info_title"] = text.strip()
+        else:
+            album["info_title"] = ""
 
-        h3s = response.xpath("//h3/text()").getall()
-        album["info_content"] = "\n".join(h.strip() for h in h3s if h.strip())
+        # info_content: <h3 class="text-left"> 内容（购买说明或曲目列表）
+        info_h3 = response.xpath("//h3[@class='text-left' and not(contains(@class,'p-1'))]")
+        if info_h3:
+            raw_h3 = info_h3[0].get()
+            text = re.sub(r'<br\s*/?>', '\n', raw_h3)
+            text = re.sub(r'<[^>]+>', '', text)
+            album["info_content"] = text.strip()
+        else:
+            album["info_content"] = ""
 
         pub_text = response.xpath("//text()[contains(., '发布于')]").get()
         pub_date = parse_date_cn(pub_text) if pub_text else None
@@ -105,6 +121,11 @@ class BaseAlbumSpider(scrapy.Spider):
         cover = response.xpath("//img[@id='imgsrc0']/@data-src").get()
         if cover:
             album["cover_url"] = cover
+
+        # 封面上传 MinIO
+        cover_key = download_image(album.get("cover_url", ""))
+        if cover_key:
+            album["cover_url"] = cover_key
 
         yield album
 
@@ -174,7 +195,9 @@ class BaseAlbumSpider(scrapy.Spider):
             circle = CircleItem()
             circle["dizzylab_labelid"] = int(labelid)
             circle["name"] = labelname
-            circle["logo_url"] = disc.get("labelcover", "")
+            logo_url = disc.get("labelcover", "")
+            logo_key = download_image(logo_url)
+            circle["logo_url"] = logo_key or logo_url
             circle["description"] = None
             yield circle
 
@@ -234,10 +257,11 @@ class BaseAlbumSpider(scrapy.Spider):
             avatar = avatars[i].strip('"') if i < len(avatars) else None
 
             if uid:
+                avatar_key = download_image(avatar) if avatar else None
                 u = UserItem()
                 u["dizzylab_user_id"] = uid
                 u["username"] = username
-                u["avatar_url"] = avatar
+                u["avatar_url"] = avatar_key or avatar
                 u["user_role"] = "normal"
                 yield u
 
@@ -261,15 +285,19 @@ class BaseAlbumSpider(scrapy.Spider):
         comments = data.get("disc_comment", [])
         user_names = data.get("user_names", [])
         user_urls = data.get("user_url", [])
+        avatars = data.get("avatar_url", [])
 
         for i in range(len(comments)):
             uid = extract_user_id(user_urls[i]) if i < len(user_urls) else None
             username = user_names[i] if i < len(user_names) else None
+            avatar = avatars[i].strip('"') if i < len(avatars) else None
 
             if uid:
+                avatar_key = download_image(avatar) if avatar else None
                 u = UserItem()
                 u["dizzylab_user_id"] = uid
                 u["username"] = username
+                u["avatar_url"] = avatar_key or avatar
                 u["user_role"] = "normal"
                 yield u
 
@@ -282,36 +310,35 @@ class BaseAlbumSpider(scrapy.Spider):
             c["_dizzylab_id"] = slug
             yield c
 
-    # ── 社团详情 ─────────────────────────────────────
+    # ── 社团详情（复用共享函数） ─────────────────────
 
     def parse_circle_detail(self, response):
+        if not check_response_ok(response):
+            return
         labelid = response.meta["_dizzylab_labelid"]
+        name = response.meta.get("_labelname", "")
 
-        member_as = response.xpath(
-            "//p[text()='成员']/following-sibling::div//a[contains(@href,'/u/')]"
+        # 复用共享函数：提取描述和 logo
+        description, logo_key = extract_circle_info(response)
+
+        # 复用共享函数：解析成员列表
+        member_count = 0
+        for item in yield_circle_members(response, labelid):
+            yield item
+            if isinstance(item, UserCircleItem):
+                member_count += 1
+
+        # 更新社团描述、logo、成员数
+        self._ensure_db_check()
+        self._check_cur.execute(
+            """UPDATE circles
+               SET description = %s,
+                   logo_url = COALESCE(%s, logo_url),
+                   member_count = %s
+               WHERE dizzylab_labelid = %s""",
+            (description, logo_key, member_count, labelid),
         )
-        for a in member_as:
-            href = a.xpath("./@href").get("")
-            uid = extract_user_id(href)
-            title = a.xpath("./@title").get("")
-            username = None
-            if title:
-                br_pos = title.rfind("<br>")
-                if br_pos != -1:
-                    username = title[br_pos + 4:].strip()
-                else:
-                    username = title.strip()
 
-            if uid:
-                u = UserItem()
-                u["dizzylab_user_id"] = uid
-                u["username"] = username
-                u["user_role"] = "normal"
-                yield u
-
-                uc = UserCircleItem()
-                uc["user_id"] = None
-                uc["circle_id"] = None
-                uc["_dizzylab_user_id"] = uid
-                uc["_dizzylab_labelid"] = labelid
-                yield uc
+        if description or member_count > 0:
+            self.logger.info("  社团 %s: 描述=%s | 成员=%d",
+                           name, "有" if description else "无", member_count)

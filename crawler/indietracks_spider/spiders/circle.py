@@ -1,11 +1,12 @@
 """
-circle_members — 社团成员爬虫
+circle — 社团爬虫
 
-遍历 circles 表所有社团，逐社团爬取成员列表。遵守 spider.json 的 mode 控制。
+遍历 circles 表所有社团，抓取社团描述、logo、成员列表。
+遵守 spider.json 的 mode 控制。
 社团间隔使用 Twisted reactor.callLater，不阻塞引擎。
 
 用法：
-    scrapy crawl circle_members
+    scrapy crawl circle
 """
 
 import logging
@@ -15,20 +16,21 @@ import scrapy
 from scrapy.exceptions import DontCloseSpider
 from scrapy import signals
 
-from indietracks_spider.items import UserItem, UserCircleItem
+from indietracks_spider.items import UserCircleItem
 from indietracks_spider.utils.config_loader import (
     get_delay_config,
     get_spider_config,
 )
 from indietracks_spider.utils.constants import BASE
 from indietracks_spider.utils.db import get_connection, close_connection
-from indietracks_spider.utils.parsing import extract_user_id, check_response_ok
+from indietracks_spider.utils.parsing import check_response_ok
+from indietracks_spider.utils.circle import extract_circle_info, yield_circle_members
 
 logger = logging.getLogger(__name__)
 
 
-class CircleMembersSpider(scrapy.Spider):
-    name = "circle_members"
+class CircleSpider(scrapy.Spider):
+    name = "circle"
 
     custom_settings = {
         "CONCURRENT_REQUESTS_PER_DOMAIN": 1,
@@ -47,14 +49,11 @@ class CircleMembersSpider(scrapy.Spider):
         self._skipped = 0
         self._db_conn = None
         self._db_cur = None
-
-        # 队列驱动
         self._pending_circles: list[tuple] = []
-
         self._delay_pending = False
 
         self.logger.info(
-            "circle_members 启动 | mode=%s | 社团间延迟=%ds",
+            "circle 启动 | mode=%s | 社团间延迟=%ds",
             self._mode,
             self._circle_delay,
         )
@@ -74,7 +73,8 @@ class CircleMembersSpider(scrapy.Spider):
             return
         self._db_conn, self._db_cur = get_connection()
 
-    def _circle_members_up_to_date(self, circle_id: int) -> bool:
+    def _circle_up_to_date(self, circle_id: int) -> bool:
+        """检查社团成员数是否与上次爬取一致。"""
         self._ensure_db()
         self._db_cur.execute(
             """SELECT c.member_count, COUNT(uc.user_id)
@@ -93,7 +93,7 @@ class CircleMembersSpider(scrapy.Spider):
     def closed(self, reason):
         close_connection(self._db_conn, self._db_cur)
         self.logger.info(
-            "circle_members 结束 | processed=%d | skipped=%d | reason=%s",
+            "circle 结束 | processed=%d | skipped=%d | reason=%s",
             self._processed,
             self._skipped,
             reason,
@@ -102,11 +102,10 @@ class CircleMembersSpider(scrapy.Spider):
     # ── 调度 ─────────────────────────────────────────
 
     def _schedule_next(self):
-        """取下一个待处理社团，注入引擎。"""
         while self._pending_circles:
             circle_id, dizzylab_labelid, name = self._pending_circles.pop(0)
 
-            if self._mode == "incremental" and self._circle_members_up_to_date(circle_id):
+            if self._mode == "incremental" and self._circle_up_to_date(circle_id):
                 self._skipped += 1
                 self.logger.info("[跳过: %d] %s (circle_id=%d) 成员数无变化", self._skipped, name, circle_id)
                 continue
@@ -151,7 +150,7 @@ class CircleMembersSpider(scrapy.Spider):
         self.logger.info("从数据库读取到 %d 个社团", len(circles))
         self._pending_circles = list(circles)
         self._schedule_next()
-        yield from ()  # 请求由 engine.crawl() 注入，start() 需要可迭代对象
+        yield from ()
 
     # ── 解析社团详情页 ──────────────────────────────
 
@@ -162,49 +161,33 @@ class CircleMembersSpider(scrapy.Spider):
             from twisted.internet import reactor
             reactor.callLater(self._circle_delay, self._on_delay_done)
             return
+
         circle_id = response.meta["_circle_id"]
         labelid = response.meta["_dizzylab_labelid"]
         name = response.meta["_circle_name"]
 
-        member_as = response.xpath(
-            "//p[text()='成员']/following-sibling::div//a[contains(@href,'/u/')]"
-        )
+        # 复用共享函数：提取描述和 logo
+        description, logo_key = extract_circle_info(response)
 
-        found = 0
-        for a in member_as:
-            href = a.xpath("./@href").get("")
-            uid = extract_user_id(href)
-            title = a.xpath("./@title").get("")
-            username = None
-            if title:
-                br_pos = title.rfind("<br>")
-                if br_pos != -1:
-                    username = title[br_pos + 4:].strip()
-                else:
-                    username = title.strip()
+        # 复用共享函数：解析成员列表（yield UserItem + UserCircleItem）
+        member_count = 0
+        for item in yield_circle_members(response, labelid):
+            yield item
+            if isinstance(item, UserCircleItem):
+                member_count += 1
 
-            if uid:
-                u = UserItem()
-                u["dizzylab_user_id"] = uid
-                u["username"] = username
-                u["user_role"] = "pro"
-                yield u
-
-                uc = UserCircleItem()
-                uc["user_id"] = None
-                uc["circle_id"] = None
-                uc["_dizzylab_user_id"] = uid
-                uc["_dizzylab_labelid"] = labelid
-                yield uc
-                found += 1
-
-        self.logger.info("  %s: 找到 %d 名成员", name, found)
-
+        # 更新社团描述、logo、成员数
         self._ensure_db()
         self._db_cur.execute(
-            "UPDATE circles SET member_count = %s WHERE circle_id = %s",
-            (found, circle_id),
+            """UPDATE circles
+               SET description = %s,
+                   logo_url = COALESCE(%s, logo_url),
+                   member_count = %s
+               WHERE circle_id = %s""",
+            (description, logo_key, member_count, circle_id),
         )
+
+        self.logger.info("  %s: 成员=%d", name, member_count)
 
         # 社团间延迟（不阻塞 reactor）
         self._delay_pending = True

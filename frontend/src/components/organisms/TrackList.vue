@@ -9,7 +9,7 @@
       :index="index"
       :is_current="currentTrackId === track.file_id"
       :playing="isPlaying && currentTrackId === track.file_id"
-      @preview="(track, idx) => $emit('preview', tracks, idx)"
+      @preview="(_, idx) => $emit('preview', tracks, idx)"
     />
   </div>
 </template>

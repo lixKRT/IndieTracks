@@ -11,19 +11,19 @@ from _common import (
 
 
 SEQUENCE = [
-    ("album_bulk",     "album_bulk (full)"),
-    ("album_incremental", "album_incremental"),
-    ("circle_members", "circle_members"),
-    ("user_roles",     "user_roles"),
-    ("user_pages",     "user_pages"),
+    ("album_bulk",        "album_bulk (full, max=N)"),
+    ("album_incremental", "album_incremental (追新)"),
+    ("circle",            "circle (社团描述+logo+成员ID)"),
+    ("user_roles",        "user_roles (STAFF/PRO)"),
+    ("user_pages",        "user_pages (已购/收藏/关注)"),
 ]
 
 INCREMENTAL_OPTIONS = [
     ("1", "album_bulk",       "album_bulk (incremental)"),
-    ("2", "album_incremental", "album_incremental"),
-    ("3", "circle_members",   "circle_members"),
-    ("4", "user_roles",       "user_roles"),
-    ("5", "user_pages",       "user_pages"),
+    ("2", "album_incremental", "album_incremental (追新)"),
+    ("3", "circle",           "circle (社团描述+logo+成员ID)"),
+    ("4", "user_roles",       "user_roles (STAFF/PRO)"),
+    ("5", "user_pages",       "user_pages (已购/收藏/关注)"),
     ("6", "album_bulk_full",  "album_bulk (full refresh, max=0)"),
 ]
 
@@ -161,7 +161,7 @@ def first_crawl():
         print()
 
     # Final full refresh
-    print(f"  ----[6/6] album_bulk (full refresh, max=0)----")
+    print(f"  ----[{len(SEQUENCE)+1}/{len(SEQUENCE)+1}] album_bulk (full refresh, max=0)----")
     print("  This will crawl ALL remaining albums.")
     do_full = input("  Run final full refresh? [y/N]: ").strip().lower()
     if do_full == "y":

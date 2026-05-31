@@ -10,9 +10,9 @@
       <p>暂无专辑</p>
     </div>
 
-    <div v-else class="album-grid">
+    <div class="album-grid">
       <AlbumCard
-        v-for="album in visibleAlbums"
+        v-for="album in albums"
         :key="album.album_id"
         :album="album"
         @album-click="album => $emit('album-click', album)"
@@ -22,8 +22,10 @@
       />
     </div>
 
-    <div v-if="!showAll && albums.length > maxVisible" class="view-all-container">
-      <button class="btn-view-all" @click="$emit('view-all')">展开全部</button>
+    <div v-if="hasMore || loadingMore" class="view-all-container">
+      <button class="btn-view-all" @click="$emit('load-more')" :disabled="loadingMore">
+        {{ loadingMore ? '加载中...' : '加载更多' }}
+      </button>
     </div>
   </div>
 </template>
@@ -37,15 +39,10 @@ export default {
   props: {
     albums: { type: Array, default: () => [] },
     loading: { type: Boolean, default: true },
-    showAll: { type: Boolean, default: false },
-    maxVisible: { type: Number, default: 6 }
+    loadingMore: { type: Boolean, default: false },
+    hasMore: { type: Boolean, default: false }
   },
-  emits: ['album-click', 'circle-click', 'tag-click', 'preview', 'view-all'],
-  computed: {
-    visibleAlbums() {
-      return this.showAll ? this.albums : this.albums.slice(0, this.maxVisible);
-    }
-  }
+  emits: ['album-click', 'circle-click', 'tag-click', 'preview', 'load-more']
 };
 </script>
 
