@@ -89,8 +89,7 @@ export default {
 .login-hint { color: var(--color-text-dim); font-size: 0.8rem; margin-bottom: var(--spacing-sm); }
 
 .comment-list {
-  flex: 1;
-  min-height: 0;
+  height: 400px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;

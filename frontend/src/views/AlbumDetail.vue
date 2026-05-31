@@ -98,24 +98,6 @@
                 </ul>
               </div>
 
-              <!-- 试听卡片 -->
-              <div class="side-card player-card">
-                <h3>试听</h3>
-                <div class="preview-list">
-                  <div
-                    v-for="(p, i) in previewTracks.slice(0, 5)"
-                    :key="p.file_id"
-                    class="preview"
-                    @click="handlePreview(album.tracks, i)"
-                  >
-                    <span class="no">{{ String(i + 1).padStart(2, '0') }}</span>
-                    <span class="p-name">{{ p.file_name }}</span>
-                    <span class="time">{{ p.duration }}</span>
-                  </div>
-                  <div v-if="previewTracks.length === 0" class="no-comments">暂无可试听曲目</div>
-                </div>
-              </div>
-
               <!-- 评论卡片 -->
               <div class="side-card comment-card" ref="commentCard">
                 <CommentSection
