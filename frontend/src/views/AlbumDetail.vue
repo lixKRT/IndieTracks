@@ -12,7 +12,7 @@
           </div>
 
           <div class="album-wrap">
-            <!-- ========== 左侧 ========== -->
+            <!-- ========== 左侧：封面 + 信息 ========== -->
             <div class="left">
               <!-- 顶部行：封面 + 社团信息 -->
               <div class="top-row">
@@ -43,7 +43,6 @@
                 </div>
               </div>
 
-              <!-- 信息区 -->
               <div class="info">
                 <h1 class="title">{{ album.title }}</h1>
                 <p class="artist" @click="goToCircle">@{{ album.circle?.name || '未知社团' }}</p>
@@ -51,12 +50,6 @@
                 <div class="stats-row">
                   <span class="price-tag" v-if="album.price > 0">¥ {{ album.price }}</span>
                   <span class="price-tag free" v-else>免费</span>
-                  <button
-                    class="detail-fav-btn"
-                    :class="{ favorited: isFavorited }"
-                    @click.stop="toggleFavorite"
-                    :title="isFavorited ? '取消收藏' : '收藏'"
-                  >{{ isFavorited ? '★' : '☆' }}</button>
                 </div>
 
                 <div class="desc" v-if="cleanText(album.info_title) || cleanText(album.info_content)">
@@ -103,6 +96,24 @@
                 <ul class="buy-info">
                   <li>全曲在线串流试听</li>
                 </ul>
+              </div>
+
+              <!-- 试听卡片 -->
+              <div class="side-card player-card">
+                <h3>试听</h3>
+                <div class="preview-list">
+                  <div
+                    v-for="(p, i) in previewTracks.slice(0, 5)"
+                    :key="p.file_id"
+                    class="preview"
+                    @click="handlePreview(album.tracks, i)"
+                  >
+                    <span class="no">{{ String(i + 1).padStart(2, '0') }}</span>
+                    <span class="p-name">{{ p.file_name }}</span>
+                    <span class="time">{{ p.duration }}</span>
+                  </div>
+                  <div v-if="previewTracks.length === 0" class="no-comments">暂无可试听曲目</div>
+                </div>
               </div>
 
               <!-- 评论卡片 -->
@@ -379,9 +390,8 @@ onMounted(() => {
 
 .cover {
   position: relative;
-  width: 400px;
-  max-width: 100%;
-  flex-shrink: 0;
+  width: 100%;
+  max-width: 400px;
   aspect-ratio: 1 / 1;
   border: 1px solid var(--color-border);
 }
@@ -745,11 +755,7 @@ onMounted(() => {
   .right {
     width: 100%;
   }
-  .top-row {
-    flex-direction: column;
-  }
   .cover {
-    width: 100%;
     max-width: 100%;
   }
 }
