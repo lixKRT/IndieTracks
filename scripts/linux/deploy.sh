@@ -1,40 +1,70 @@
 #!/bin/bash
 # ============================================
-# 服务器部署脚本 — 在目标服务器上运行
-# 前提: 已安装 JDK 21+, Nginx, PostgreSQL
+# IndieTracks 部署脚本
+# 构建前端和后端，重启服务
 # ============================================
 set -e
 
-APP_DIR="/opt/indietracks"
-JAR_NAME="backend-0.0.1-SNAPSHOT.jar"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+ENV_FILE="$SCRIPT_DIR/.env"
 
-echo "=== 1. 创建目录 ==="
-sudo mkdir -p "$APP_DIR"/{backend,frontend/dist,logs}
+# 颜色输出
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
 
-echo "=== 2. 部署后端 ==="
-sudo cp backend/target/$JAR_NAME "$APP_DIR/backend/"
-sudo cp scripts/linux/application-prod.properties "$APP_DIR/backend/"
+info() { echo -e "${GREEN}[INFO]${NC} $1"; }
+warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
-echo "=== 3. 部署前端 ==="
-sudo cp -r frontend/dist/* "$APP_DIR/frontend/dist/"
+echo "============================================"
+echo "  IndieTracks 部署"
+echo "============================================"
+echo ""
 
-echo "=== 4. 配置 Nginx ==="
-sudo cp scripts/linux/nginx.conf /etc/nginx/sites-available/indietracks.conf
-sudo ln -sf /etc/nginx/sites-available/indietracks.conf /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
-sudo nginx -t && sudo systemctl reload nginx
+# ── 检查环境变量 ───────────────────────────
+if [ ! -f "$ENV_FILE" ]; then
+    error ".env 文件不存在。请先运行 setup-all.sh"
+fi
+source "$ENV_FILE"
 
-echo "=== 5. 配置 Systemd 服务 ==="
-sudo cp scripts/linux/indietracks.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable indietracks
-sudo systemctl restart indietracks
+# ── 构建前端 ───────────────────────────────
+info "构建前端..."
+cd "$ROOT_DIR/frontend"
+npm install
+npm run build
+info "前端构建完成"
 
-echo "=== 6. 开放防火墙 ==="
-sudo ufw allow 80/tcp    # HTTP
-sudo ufw allow 443/tcp   # HTTPS (如果用)
+# ── 构建后端 ───────────────────────────────
+info "构建后端..."
+cd "$ROOT_DIR/backend"
+export JAVA_HOME=/usr/lib/jvm/java-25-amazon-corretto
 
-echo "=== 部署完成 ==="
-echo "检查状态: sudo systemctl status indietracks"
-echo "查看日志: sudo journalctl -u indietracks -f"
-echo "访问: http://$(hostname -I | awk '{print $1}')"
+# 复制生产环境配置
+cp "$SCRIPT_DIR/application-prod.properties" "$ROOT_DIR/backend/"
+
+if [ -f "./mvnw" ]; then
+    ./mvnw clean package -DskipTests
+else
+    mvn clean package -DskipTests
+fi
+info "后端构建完成"
+
+# ── 重启服务 ───────────────────────────────
+info "重启 Nginx..."
+nginx -t && systemctl reload nginx
+
+info "重启后端服务..."
+systemctl restart indietracks
+
+# ── 完成 ───────────────────────────────────
+echo ""
+echo "============================================"
+echo "  部署完成！"
+echo "============================================"
+echo ""
+echo "  查看后端状态: sudo systemctl status indietracks"
+echo "  查看实时日志: sudo journalctl -u indietracks -f"
+echo ""

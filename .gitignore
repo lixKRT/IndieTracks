@@ -19,6 +19,11 @@ __pycache__/
 # ── 工具二进制 ──────────────────────
 /tools/minio/minio.exe
 /tools/minio/mc.exe
+/tools/minio/minio
+/tools/minio/mc
+
+# ── 环境变量 ────────────────────────
+scripts/linux/.env
 
 # ── 杂项 ────────────────────────────
 *.log

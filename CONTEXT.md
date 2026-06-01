@@ -90,3 +90,20 @@ molecules → organisms → layouts → views
 ## 已知问题
 
 - AlbumGrid 外层容器宽度未达 80% 预期，内层 grid 居中逻辑需排查父级约束或 CSS 优先级。(2026-05-15)
+
+## 部署架构
+
+### 生产环境（Linux）
+
+```
+浏览器 → Nginx (:80)
+           ├── /         → /root/IndieTracks/frontend/dist/  (静态文件)
+           └── /api/*    → proxy_pass http://127.0.0.1:8080  (Spring Boot)
+```
+
+- 前端：Nginx 直接 serve 静态文件
+- 后端：Spring Boot 以 jar 包运行，Systemd 管理
+- 数据库：PostgreSQL 18
+- 对象存储：MinIO（二进制部署在 tools/ 目录）
+- 环境变量：`scripts/linux/.env` 文件管理
+- 一键部署：`bash scripts/linux/setup-all.sh`

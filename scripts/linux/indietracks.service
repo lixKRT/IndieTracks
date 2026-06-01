@@ -4,26 +4,12 @@ After=network.target postgresql.service
 
 [Service]
 Type=simple
-User=indietracks
-WorkingDirectory=/opt/indietracks/backend
-ExecStart=/usr/bin/java -jar backend-0.0.1-SNAPSHOT.jar --spring.config.location=file:./application-prod.properties
+User=root
+WorkingDirectory=/root/IndieTracks/backend
+EnvironmentFile=/root/IndieTracks/scripts/linux/.env
+ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar target/backend-0.0.1-SNAPSHOT.jar --spring.config.location=file:./application-prod.properties
 Restart=always
 RestartSec=5
-
-# 环境变量 — 在此设置敏感信息
-Environment=DB_HOST=localhost
-Environment=DB_PORT=5432
-Environment=DB_NAME=indietracks
-Environment=DB_USER=indietracks
-Environment=DB_PASS=你的数据库密码
-Environment=JWT_SECRET=你的JWT密钥至少32字符
-Environment=MINIO_ENDPOINT=http://localhost:9000
-Environment=MINIO_ACCESS_KEY=minioadmin
-Environment=MINIO_SECRET_KEY=minioadmin
-
-# JVM 参数
-Environment=JAVA_OPTS=-Xms256m -Xmx512m
-
 StandardOutput=journal
 StandardError=journal
 
