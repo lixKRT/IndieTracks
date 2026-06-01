@@ -14,5 +14,9 @@ public interface CircleMapper extends BaseMapper<Circle> {
 
     List<CircleListItem> selectCircleList();
 
+    List<CircleListItem> selectCircleListPaged(@Param("offset") int offset, @Param("limit") int limit);
+
+    int selectCircleCount();
+
     List<CircleDetail.CircleMember> selectMembersByCircleId(@Param("circle_id") Integer circle_id);
 }

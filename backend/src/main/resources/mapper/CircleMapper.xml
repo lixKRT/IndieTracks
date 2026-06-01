@@ -27,6 +27,37 @@
         ORDER BY c.circle_id
     </select>
 
+    <!-- 社团列表分页 -->
+    <select id="selectCircleListPaged" resultType="com.indietracks.backend.dto.CircleListItem">
+        SELECT
+            c.circle_id,
+            c.name,
+            c.logo_url,
+            c.description,
+            COALESCE(ac.album_count, 0) AS album_count,
+            c.member_count,
+            la.latest_album_date
+        FROM circles c
+        LEFT JOIN LATERAL (
+            SELECT COUNT(*) AS album_count
+            FROM album_circles ac2
+            WHERE ac2.circle_id = c.circle_id
+        ) ac ON true
+        LEFT JOIN LATERAL (
+            SELECT MAX(a.publish_date) AS latest_album_date
+            FROM albums a
+            JOIN album_circles ac3 ON a.album_id = ac3.album_id
+            WHERE ac3.circle_id = c.circle_id
+        ) la ON true
+        ORDER BY c.circle_id
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 社团总数 -->
+    <select id="selectCircleCount" resultType="int">
+        SELECT COUNT(*) FROM circles
+    </select>
+
     <!-- 社团成员 -->
     <select id="selectMembersByCircleId" resultType="com.indietracks.backend.dto.CircleDetail$CircleMember">
         SELECT u.user_id, u.username, u.avatar_url, u.user_role

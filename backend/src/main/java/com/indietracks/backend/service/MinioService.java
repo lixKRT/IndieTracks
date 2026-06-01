@@ -10,8 +10,8 @@ public class MinioService {
 
     private static final Logger log = LoggerFactory.getLogger(MinioService.class);
 
-    @Value("${minio.endpoint}")
-    private String endpoint;
+    @Value("${minio.url-prefix}")
+    private String urlPrefix;
 
     @Value("${minio.bucket}")
     private String bucket;
@@ -20,7 +20,9 @@ public class MinioService {
         if (objectKey == null || objectKey.isBlank()) {
             return null;
         }
-        // 匿名访问已开启，直接构造 URL
-        return endpoint + "/" + bucket + "/" + objectKey;
+        // url-prefix 由环境配置决定：
+        // - dev: http://localhost:9000（直接访问 MinIO）
+        // - prod: /minio（Nginx 代理）
+        return urlPrefix + "/" + bucket + "/" + objectKey;
     }
 }

@@ -29,8 +29,8 @@ export async function fetchAlbum(album_id) {
 }
 
 // ===== 社团 =====
-export async function fetchCircles() {
-  const { data } = await api.get('/circles');
+export async function fetchCircles({ page = 1, page_size = 12 } = {}) {
+  const { data } = await api.get('/circles', { params: { page, page_size } });
   return data;
 }
 

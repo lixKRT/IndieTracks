@@ -7,18 +7,31 @@
 
     <LoadingSpinner v-if="loading" />
 
-    <div v-else class="circles-grid">
-      <CircleCard
-        v-for="circle in circles"
-        :key="circle.circle_id"
-        :circle="circle"
-        :is-followed="followedIds.has(circle.circle_id)"
-        @circle-click="goToCircleById(circle.circle_id)"
-        @tag-click="goToTag"
-        @album-click="goToAlbum"
-        @toggle-follow="toggleFollow"
-      />
-    </div>
+    <template v-else>
+      <div class="circles-grid">
+        <CircleCard
+          v-for="circle in circles"
+          :key="circle.circle_id"
+          :circle="circle"
+          :is-followed="followedIds.has(circle.circle_id)"
+          @circle-click="goToCircleById(circle.circle_id)"
+          @tag-click="goToTag"
+          @album-click="goToAlbum"
+          @toggle-follow="toggleFollow"
+        />
+      </div>
+
+      <!-- 加载更多 -->
+      <div class="load-more-wrap" v-if="circles.length < totalCircles">
+        <button
+          class="load-more-btn"
+          :disabled="loadingMore"
+          @click="loadMore"
+        >
+          {{ loadingMore ? '加载中...' : '加载更多' }}
+        </button>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -34,7 +47,15 @@ export default {
   name: 'LabelsView',
   components: { LoadingSpinner, CircleCard },
   data() {
-    return { circles: [], loading: true, followedIds: new Set() };
+    return {
+      circles: [],
+      loading: true,
+      loadingMore: false,
+      page: 1,
+      pageSize: 12,
+      totalCircles: 0,
+      followedIds: new Set()
+    };
   },
   setup() {
     const userStore = useUserStore();
@@ -43,25 +64,53 @@ export default {
     return { userStore, goToAlbum, goToCircleById, goToTag, guard };
   },
   async mounted() {
-    try {
-      const result = await fetchCircles();
-      this.circles = result.data;
-      if (this.userStore.isLoggedIn) {
-        for (const c of this.circles) {
-          try {
-            const data = await checkCircleFollow(c.circle_id);
-            if (data.followed) this.followedIds.add(c.circle_id);
-          } catch { /* ignore */ }
-        }
-        this.followedIds = new Set(this.followedIds);
-      }
-    } catch (e) {
-      console.error('加载社团列表失败:', e);
-    } finally {
-      this.loading = false;
-    }
+    await this.loadData();
   },
   methods: {
+    async loadData() {
+      this.loading = true;
+      try {
+        const result = await fetchCircles({ page: 1, page_size: this.pageSize });
+        this.circles = result.data;
+        this.totalCircles = result.total;
+        this.page = 1;
+
+        if (this.userStore.isLoggedIn) {
+          await this.checkFollowStatus(this.circles);
+        }
+      } catch (e) {
+        console.error('加载社团列表失败:', e);
+      } finally {
+        this.loading = false;
+      }
+    },
+    async loadMore() {
+      if (this.loadingMore || this.circles.length >= this.totalCircles) return;
+      this.loadingMore = true;
+      try {
+        this.page++;
+        const result = await fetchCircles({ page: this.page, page_size: this.pageSize });
+        this.circles.push(...result.data);
+
+        if (this.userStore.isLoggedIn) {
+          await this.checkFollowStatus(result.data);
+        }
+      } catch (e) {
+        console.error('加载更多失败:', e);
+        this.page--;
+      } finally {
+        this.loadingMore = false;
+      }
+    },
+    async checkFollowStatus(circles) {
+      for (const c of circles) {
+        try {
+          const data = await checkCircleFollow(c.circle_id);
+          if (data.followed) this.followedIds.add(c.circle_id);
+        } catch { /* ignore */ }
+      }
+      this.followedIds = new Set(this.followedIds);
+    },
     async toggleFollow(circle) {
       await this.guard(async () => {
         if (this.followedIds.has(circle.circle_id)) {
@@ -109,6 +158,32 @@ export default {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--spacing-xl);
+}
+
+.load-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-2xl);
+}
+
+.load-more-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  padding: 12px 48px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.load-more-btn:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.load-more-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {

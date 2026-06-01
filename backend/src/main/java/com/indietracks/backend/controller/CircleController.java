@@ -21,10 +21,10 @@ public class CircleController {
     }
 
     @GetMapping
-    public ResponseEntity<Map<String, Object>> getCircles() {
-        List<CircleListItem> circles = circleService.getCircleList();
-        Map<String, Object> response = new HashMap<>();
-        response.put("data", circles);
+    public ResponseEntity<Map<String, Object>> getCircles(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "12") int page_size) {
+        Map<String, Object> response = circleService.getCircleListPaged(page, page_size);
         return ResponseEntity.ok(response);
     }
 

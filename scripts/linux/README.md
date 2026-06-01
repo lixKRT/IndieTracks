@@ -57,18 +57,82 @@ bash scripts/linux/deploy.sh
 /root/IndieTracks/
 ├── frontend/dist/          ← Nginx 静态文件
 ├── backend/target/         ← JAR 包
+├── crawler/                ← 爬虫项目
+│   ├── env/                ← Python venv
+│   ├── config/             ← 爬虫配置
+│   └── indietracks_spider/ ← 爬虫代码
 ├── tools/minio/            ← MinIO 二进制
 ├── database/minio-data/    ← MinIO 数据
 ├── logs/                   ← 日志
 └── scripts/linux/          ← 部署脚本
     ├── .env                ← 环境变量
-    ├── setup-all.sh        ← 一键部署
+    ├── setup-all.sh        ← 一键部署（Web 应用）
+    ├── setup-crawler.sh    ← 一键部署（爬虫）
     ├── setup-database.sh   ← 数据库部署
     ├── setup-minio.sh      ← MinIO 部署
     ├── deploy.sh           ← 应用部署
+    ├── run-crawlers.sh     ← 爬虫启动器
     ├── nginx.conf          ← Nginx 配置模板
     └── indietracks.service ← Systemd 服务配置
 ```
+
+## 爬虫部署
+
+### 一键部署爬虫
+
+```bash
+bash scripts/linux/setup-crawler.sh
+```
+
+脚本会自动完成：
+- 检查 Python 版本（需要 3.11+）
+- 创建 venv + 安装依赖
+- 配置 database.json
+- 测试数据库连接 + 建表
+- 检查 MinIO
+- 运行单元测试验证
+
+### 运行爬虫
+
+```bash
+# 使用爬虫启动器（推荐）
+bash scripts/linux/run-crawlers.sh
+
+# 或手动运行
+cd /root/IndieTracks/crawler
+source env/bin/activate
+scrapy crawl album_bulk
+```
+
+### 爬虫启动器功能
+
+`run-crawlers.sh` 提供两种模式：
+
+**首次爬取（full 模式）：**
+- 依次运行所有爬虫：album_bulk → album_incremental → circle → user_roles → user_pages
+- 可配置最大爬取专辑数和用户数
+
+**增量更新（incremental 模式）：**
+- 选择要运行的爬虫
+- 支持单个或多个爬虫同时运行
+
+### 爬虫配置
+
+编辑 `crawler/config/spider.json`：
+
+```json
+{
+  "mode": "full",
+  "max_albums": 24,
+  "max_users": 10
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| `mode` | `full`（全量）或 `incremental`（增量） |
+| `max_albums` | 最大爬取专辑数（0=不限） |
+| `max_users` | 最大爬取用户数（0=不限） |
 
 ## 环境变量说明
 

@@ -69,7 +69,7 @@ com.indietracks.backend/
 |---|---|---|
 | GET | `/api/albums` | 专辑列表（分页+筛选） |
 | GET | `/api/albums/{id}` | 专辑详情 |
-| GET | `/api/circles` | 社团列表 |
+| GET | `/api/circles` | 社团列表（分页：`page`, `page_size`） |
 | GET | `/api/circles/{id}` | 社团详情 |
 | GET | `/api/tags` | 标签列表 |
 | GET | `/api/users/{id}` | 用户详情 |

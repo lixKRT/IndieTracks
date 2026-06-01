@@ -1,13 +1,24 @@
 # CLAUDE.md — Scripts
 
-IndieTracks 运维脚本（Python），位于 `scripts/windows/`。
+IndieTracks 运维脚本，分 Windows（Python）和 Linux（Bash）两套。
 
 ## 执行方式
+
+### Windows
 
 ```bash
 python scripts/windows/setup-database.py
 python scripts/windows/setup-minio.py
 python scripts/windows/run-crawlers.py
+```
+
+### Linux
+
+```bash
+bash scripts/linux/setup-all.sh          # 一键部署 Web 应用
+bash scripts/linux/setup-crawler.sh      # 一键部署爬虫环境
+bash scripts/linux/run-crawlers.sh       # 爬虫启动器
+bash scripts/linux/deploy.sh             # 重新构建部署
 ```
 
 ## 脚本说明

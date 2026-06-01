@@ -98,12 +98,19 @@ molecules → organisms → layouts → views
 ```
 浏览器 → Nginx (:80)
            ├── /         → /root/IndieTracks/frontend/dist/  (静态文件)
-           └── /api/*    → proxy_pass http://127.0.0.1:8080  (Spring Boot)
+           ├── /api/*    → proxy_pass http://127.0.0.1:8080  (Spring Boot)
+           └── /minio/*  → proxy_pass http://127.0.0.1:9000  (MinIO 对象存储)
 ```
 
 - 前端：Nginx 直接 serve 静态文件
 - 后端：Spring Boot 以 jar 包运行，Systemd 管理
 - 数据库：PostgreSQL 18
-- 对象存储：MinIO（二进制部署在 tools/ 目录）
+- 对象存储：MinIO（二进制部署在 tools/ 目录，Nginx 代理访问）
 - 环境变量：`scripts/linux/.env` 文件管理
 - 一键部署：`bash scripts/linux/setup-all.sh`
+
+### MinIO 资源访问
+
+- 生产环境：后端返回 `/minio/indietracks/...` 相对路径，由 Nginx 代理到 MinIO
+- 开发环境：后端返回 `http://localhost:9000/indietracks/...` 完整 URL，直接访问
+- 配置方式：`minio.url-prefix` 属性，dev 用 `${minio.endpoint}`，prod 用 `/minio`

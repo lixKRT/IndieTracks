@@ -23,7 +23,7 @@
 
                 <!-- 社团信息卡片 -->
                 <div class="circle-card" v-if="circleDetail">
-                  <div class="circle-header" @click="goToCircle">
+                  <div class="circle-header" @click="goToCircle(circleDetail)">
                     <img :src="circleDetail.logo_url" :alt="circleDetail.name" class="circle-logo" />
                     <h3 class="circle-name">{{ circleDetail.name }}</h3>
                   </div>
@@ -33,7 +33,7 @@
                     <span><i class="fas fa-user-friends"></i> {{ circleDetail.members.length }} 名成员</span>
                   </div>
                   <div class="circle-card-actions">
-                    <button class="circle-link-btn" @click.stop="goToCircle">查看社团 →</button>
+                    <button class="circle-link-btn" @click.stop="goToCircle(circleDetail)">查看社团 →</button>
                     <button
                       class="circle-follow-btn"
                       :class="{ followed: isCircleFollowed }"
@@ -45,7 +45,7 @@
 
               <div class="info">
                 <h1 class="title">{{ album.title }}</h1>
-                <p class="artist" @click="goToCircle">@{{ album.circle?.name || '未知社团' }}</p>
+                <p class="artist" @click="goToCircle(album.circle)">@{{ album.circle?.name || '未知社团' }}</p>
 
                 <div class="stats-row">
                   <span class="price-tag" v-if="album.price > 0">¥ {{ album.price }}</span>

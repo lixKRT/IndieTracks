@@ -29,6 +29,28 @@ public class CircleService {
         List<CircleListItem> circles = circleMapper.selectCircleList();
         if (circles.isEmpty()) return circles;
 
+        enrichCircles(circles);
+        return circles;
+    }
+
+    public Map<String, Object> getCircleListPaged(int page, int pageSize) {
+        int offset = (page - 1) * pageSize;
+        List<CircleListItem> circles = circleMapper.selectCircleListPaged(offset, pageSize);
+        int total = circleMapper.selectCircleCount();
+
+        if (!circles.isEmpty()) {
+            enrichCircles(circles);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", circles);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("page_size", pageSize);
+        return result;
+    }
+
+    private void enrichCircles(List<CircleListItem> circles) {
         List<Integer> circleIds = circles.stream().map(CircleListItem::getCircle_id).toList();
         List<AlbumListItem> allAlbums = albumMapper.selectAlbumsByCircleIds(circleIds);
         Map<Integer, List<AlbumListItem>> albumsByCircle = allAlbums.stream()
@@ -45,8 +67,6 @@ public class CircleService {
         for (CircleListItem circle : circles) {
             urlPresign.presignPreviewAlbums(circle.getPreview_albums());
         }
-
-        return circles;
     }
 
     public CircleDetail getCircleDetail(Integer circleId) {
