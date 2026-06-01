@@ -93,8 +93,17 @@
                 <button class="buy-btn" @click="handleBuy">
                   {{ album.price > 0 ? '立即试听' : '免费试听' }}
                 </button>
+                <button
+                  class="purchase-btn"
+                  :class="{ owned: isPurchased }"
+                  :disabled="isPurchased"
+                  @click="handlePurchase"
+                >
+                  {{ isPurchased ? '已拥有' : (album.price > 0 ? `¥${album.price} 购买` : '免费领取') }}
+                </button>
                 <ul class="buy-info">
                   <li>全曲在线串流试听</li>
+                  <li v-if="!isPurchased">购买后永久拥有</li>
                 </ul>
               </div>
 
@@ -136,13 +145,22 @@
         </template>
       </div>
     </main>
+
+    <!-- 购买确认浮窗 -->
+    <PurchaseModal
+      :album="album"
+      :visible="showPurchaseModal"
+      :purchasing="purchasing"
+      @close="showPurchaseModal = false"
+      @confirm="handlePurchaseConfirm"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchAlbum, fetchRecommendations, fetchCircle, fetchComments, addComment, updateComment, deleteComment, checkCircleFollow, followCircle, unfollowCircle } from '../api'
+import { fetchAlbum, fetchRecommendations, fetchCircle, fetchComments, addComment, updateComment, deleteComment, checkCircleFollow, followCircle, unfollowCircle, purchaseAlbum, checkPurchased } from '../api'
 import { usePlayerStore } from '../stores/player.js'
 import { useFavoriteStore } from '../stores/favorite.js'
 import { useUserStore } from '../stores/user.js'
@@ -152,6 +170,7 @@ import { cleanText } from '../utils/text.js'
 import TrackList from '../components/organisms/TrackList.vue'
 import CommentSection from '../components/organisms/CommentSection.vue'
 import LoadingSpinner from '../components/atoms/LoadingSpinner.vue'
+import PurchaseModal from '../components/molecules/PurchaseModal.vue'
 
 const route = useRoute()
 const player = usePlayerStore()
@@ -164,6 +183,9 @@ const album = ref(null)
 const loading = ref(true)
 const recommendList = ref([])
 const circleDetail = ref(null)
+const isPurchased = ref(false)
+const showPurchaseModal = ref(false)
+const purchasing = ref(false)
 const isCircleFollowed = ref(false)
 const comments = ref([])
 const commentsTotal = ref(0)
@@ -186,6 +208,11 @@ async function loadAlbum() {
     // 检查收藏状态
     if (userStore.isLoggedIn) {
       await favorite.check(album.value.album_id)
+      // 检查购买状态
+      try {
+        const purchaseStatus = await checkPurchased(album.value.album_id)
+        isPurchased.value = purchaseStatus.owned
+      } catch { /* ignore */ }
     }
 
     // 初始化评论（详情页返回前 5 条）
@@ -313,6 +340,29 @@ function handleTrackClick(tracks, startIndex) {
 function handleBuy() {
   if (album.value.tracks?.length > 0) {
     player.playAlbumTracks(album.value.tracks, 0)
+  }
+}
+
+function handlePurchase() {
+  if (isPurchased.value) return
+  if (!userStore.isLoggedIn) {
+    alert('请先登录')
+    return
+  }
+  showPurchaseModal.value = true
+}
+
+async function handlePurchaseConfirm() {
+  purchasing.value = true
+  try {
+    await purchaseAlbum(album.value.album_id)
+    isPurchased.value = true
+    showPurchaseModal.value = false
+  } catch (e) {
+    console.error('购买失败:', e)
+    alert('购买失败，请重试')
+  } finally {
+    purchasing.value = false
   }
 }
 
@@ -654,6 +704,29 @@ onMounted(() => {
 }
 .buy-btn:hover {
   background: var(--color-accent-hover);
+}
+
+.purchase-btn {
+  display: block;
+  width: 100%;
+  padding: 11px 0;
+  background: transparent;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: all 0.2s;
+}
+.purchase-btn:hover:not(:disabled) {
+  background: rgba(255, 107, 107, 0.1);
+}
+.purchase-btn.owned {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text-dim);
+  cursor: not-allowed;
 }
 
 .buy-info {

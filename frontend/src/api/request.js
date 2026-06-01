@@ -98,6 +98,22 @@ export async function checkFavorite(albumId) {
   return data;
 }
 
+// ===== 购买 =====
+export async function purchaseAlbum(albumId) {
+  const { data } = await api.post(`/purchases/${albumId}`);
+  return data;
+}
+
+export async function checkPurchased(albumId) {
+  const { data } = await api.get(`/purchases/${albumId}/status`);
+  return data;
+}
+
+export async function getUserPurchases() {
+  const { data } = await api.get('/purchases');
+  return data;
+}
+
 // ===== 关注社团 =====
 export async function followCircle(circleId) {
   const { data } = await api.post(`/circle-follows/${circleId}`);

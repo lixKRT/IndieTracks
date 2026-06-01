@@ -5,6 +5,7 @@ export {
   fetchUser, getUserFavorites, getUserFollowingCircles, getUserFollowingUsers,
   fetchComments, addComment, updateComment, deleteComment,
   getFavorites, addFavorite, removeFavorite, checkFavorite,
+  purchaseAlbum, checkPurchased, getUserPurchases,
   followCircle, unfollowCircle, checkCircleFollow,
   followUser, unfollowUser, checkUserFollow,
   register, login, logout, fetchMe, uploadAvatar

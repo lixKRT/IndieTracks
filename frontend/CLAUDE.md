@@ -75,6 +75,15 @@ src/
 | `getTags` | 无 | 标签数组（同步） |
 | `fetchUser` | `user_id` | 用户详情 |
 
+## 组件说明
+
+**PurchaseModal** (`components/molecules/PurchaseModal.vue`)：
+- 购买确认浮窗，使用 Teleport 渲染到 body
+- Props: `album`（对象）, `visible`（布尔）, `purchasing`（布尔）
+- Events: `close`, `confirm`
+- 显示专辑封面、名称、社团、价格
+- 确认按钮带 loading 动画
+
 ## Routes
 
 | Path | View | 说明 |

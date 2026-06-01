@@ -45,6 +45,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/albums/*/comments").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/comments/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/comments/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/purchases/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/purchases").authenticated()
                 // 其他请求放行
                 .anyRequest().permitAll()
             )

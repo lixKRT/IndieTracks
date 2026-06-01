@@ -69,10 +69,14 @@ com.indietracks.backend/
 |---|---|---|
 | GET | `/api/albums` | 专辑列表（分页+筛选） |
 | GET | `/api/albums/{id}` | 专辑详情 |
+| GET | `/api/albums/{id}/recommendations` | 随机推荐 5 张专辑 |
 | GET | `/api/circles` | 社团列表（分页：`page`, `page_size`） |
 | GET | `/api/circles/{id}` | 社团详情 |
 | GET | `/api/tags` | 标签列表 |
 | GET | `/api/users/{id}` | 用户详情 |
+| GET | `/api/purchases` | 已购专辑列表（需登录） |
+| POST | `/api/purchases/{albumId}` | 购买专辑（需登录） |
+| GET | `/api/purchases/{albumId}/status` | 检查是否已购（需登录） |
 
 详细接口文档见 `docs/后端开发计划书.md`。
 

@@ -28,6 +28,9 @@
         <button class="tab-btn" :class="{ active: activeTab === 'favorites' }" @click="activeTab = 'favorites'">
           收藏 ({{ favorites.length }})
         </button>
+        <button class="tab-btn" :class="{ active: activeTab === 'purchases' }" @click="activeTab = 'purchases'">
+          已购买 ({{ purchases.length }})
+        </button>
         <button class="tab-btn" :class="{ active: activeTab === 'following' }" @click="activeTab = 'following'">
           关注 ({{ followingCircles.length + followingUsers.length }})
         </button>
@@ -39,6 +42,21 @@
         <AlbumGrid
           v-else
           :albums="favorites"
+          :loading="false"
+          :favorited-ids="favorite.favoriteAlbumIds"
+          @album-click="goToAlbum"
+          @circle-click="goToCircle"
+          @tag-click="goToTag"
+          @toggle-favorite="handleToggleFavorite"
+        />
+      </div>
+
+      <!-- 已购买专辑 -->
+      <div v-if="activeTab === 'purchases'" class="tab-content">
+        <EmptyState v-if="purchases.length === 0" message="暂无已购专辑" />
+        <AlbumGrid
+          v-else
+          :albums="purchases"
           :loading="false"
           :favorited-ids="favorite.favoriteAlbumIds"
           @album-click="goToAlbum"
@@ -118,7 +136,7 @@ import AlbumGrid from '../components/organisms/AlbumGrid.vue';
 import CircleCard from '../components/molecules/CircleCard.vue';
 import LoadingSpinner from '../components/atoms/LoadingSpinner.vue';
 import EmptyState from '../components/atoms/EmptyState.vue';
-import { fetchUser, getUserFavorites, getUserFollowingCircles, getUserFollowingUsers, checkUserFollow, followUser as apiFollowUser, unfollowUser as apiUnfollowUser, unfollowCircle as apiUnfollowCircle, followCircle as apiFollowCircle, uploadAvatar } from '../api';
+import { fetchUser, getUserFavorites, getUserFollowingCircles, getUserFollowingUsers, getUserPurchases, checkUserFollow, followUser as apiFollowUser, unfollowUser as apiUnfollowUser, unfollowCircle as apiUnfollowCircle, followCircle as apiFollowCircle, uploadAvatar } from '../api';
 
 export default {
   name: 'UserProfile',
@@ -134,6 +152,7 @@ export default {
     const activeTab = ref('favorites');
     const followTab = ref('circles');
     const favorites = ref([]);
+    const purchases = ref([]);
     const followingCircles = ref([]);
     const followingUsers = ref([]);
     const isFollowed = ref(false);
@@ -148,12 +167,14 @@ export default {
       try {
         user.value = await fetchUser(id);
 
-        const [favRes, circRes, userRes] = await Promise.allSettled([
+        const [favRes, purchRes, circRes, userRes] = await Promise.allSettled([
           getUserFavorites(id),
+          getUserPurchases(),
           getUserFollowingCircles(id),
           getUserFollowingUsers(id)
         ]);
         favorites.value = favRes.status === 'fulfilled' ? favRes.value : [];
+        purchases.value = purchRes.status === 'fulfilled' ? purchRes.value : [];
         followingCircles.value = circRes.status === 'fulfilled' ? circRes.value : [];
         followingUsers.value = userRes.status === 'fulfilled' ? userRes.value : [];
 
@@ -244,7 +265,7 @@ export default {
     watch(() => route.params.id, loadData);
 
     return {
-      user, loading, activeTab, followTab, favorites, followingCircles, followingUsers,
+      user, loading, activeTab, followTab, favorites, purchases, followingCircles, followingUsers,
       isFollowed, isOwner, handleToggleFollow, handleToggleFavorite, handleAvatarUpload,
       handleUnfollowUser, handleRefollowUser, handleUnfollowCircle, handleRefollowCircle, handleToggleCircleFollow,
       userStore, favorite, goToAlbum, goToCircle, goToTag, goToUser, goToCircleById
