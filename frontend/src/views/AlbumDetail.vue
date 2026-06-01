@@ -129,7 +129,7 @@
                   <img :src="item.cover_url" :alt="item.title" />
                 </div>
                 <p class="rec-title">{{ item.title }}</p>
-                <p class="rec-artist">@{{ item.circle?.name || '未知' }}</p>
+                <p class="rec-artist">@{{ item.circle_name || '未知' }}</p>
               </div>
             </div>
           </div>
@@ -142,7 +142,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchAlbum, fetchAlbums, fetchCircle, fetchComments, addComment, updateComment, deleteComment, checkCircleFollow, followCircle, unfollowCircle } from '../api'
+import { fetchAlbum, fetchRecommendations, fetchCircle, fetchComments, addComment, updateComment, deleteComment, checkCircleFollow, followCircle, unfollowCircle } from '../api'
 import { usePlayerStore } from '../stores/player.js'
 import { useFavoriteStore } from '../stores/favorite.js'
 import { useUserStore } from '../stores/user.js'
@@ -212,10 +212,10 @@ async function loadAlbum() {
       }
     }
 
-    // 加载推荐作品
+    // 加载推荐作品（随机抽取 5 张）
     try {
-      const result = await fetchAlbums({ page_size: 6 })
-      recommendList.value = (result.data || []).filter(a => a.album_id !== album.value?.album_id).slice(0, 5)
+      const result = await fetchRecommendations(album.value.album_id)
+      recommendList.value = result || []
     } catch {
       recommendList.value = []
     }

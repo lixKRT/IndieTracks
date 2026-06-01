@@ -12,6 +12,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/albums")
 public class AlbumController {
@@ -59,5 +61,11 @@ public class AlbumController {
                                         @CurrentUser Integer userId) {
         commentService.addComment(id, userId, req.getContent());
         return ResponseEntity.ok(commentService.getCommentsPaged(id, 1, 5));
+    }
+
+    @GetMapping("/{id}/recommendations")
+    public ResponseEntity<List<AlbumListItem>> getRecommendations(@PathVariable Integer id) {
+        List<AlbumListItem> recommendations = albumService.getRandomRecommendations(id, 5);
+        return ResponseEntity.ok(recommendations);
     }
 }

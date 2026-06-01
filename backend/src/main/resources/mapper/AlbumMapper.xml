@@ -152,4 +152,18 @@
         SELECT COUNT(*) FROM comments WHERE album_id = #{album_id}
     </select>
 
+    <!-- 随机推荐专辑（排除当前专辑） -->
+    <select id="selectRandomAlbums" resultType="com.indietracks.backend.dto.AlbumListItem">
+        SELECT <include refid="albumColumns"/>
+        FROM albums a
+        LEFT JOIN album_circles ac ON a.album_id = ac.album_id
+        LEFT JOIN circles c ON ac.circle_id = c.circle_id
+        <include refid="tagsSubquery"/>
+        <include refid="trackCountSubquery"/>
+        WHERE a.album_id != #{album_id}
+          AND (a.info_title IS NOT NULL OR a.info_content IS NOT NULL)
+        ORDER BY RANDOM()
+        LIMIT #{limit}
+    </select>
+
 </mapper>

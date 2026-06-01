@@ -28,6 +28,11 @@ export async function fetchAlbum(album_id) {
   return data;
 }
 
+export async function fetchRecommendations(albumId) {
+  const { data } = await api.get(`/albums/${albumId}/recommendations`);
+  return data;
+}
+
 // ===== 社团 =====
 export async function fetchCircles({ page = 1, page_size = 12 } = {}) {
   const { data } = await api.get('/circles', { params: { page, page_size } });

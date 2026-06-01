@@ -37,4 +37,6 @@ public interface AlbumMapper extends BaseMapper<Album> {
                                                      @Param("offset") int offset);
 
     int countCommentsByAlbumId(@Param("album_id") Integer album_id);
+
+    List<AlbumListItem> selectRandomAlbums(@Param("album_id") Integer album_id, @Param("limit") int limit);
 }

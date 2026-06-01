@@ -1,5 +1,5 @@
 export {
-  fetchAlbums, fetchAlbum,
+  fetchAlbums, fetchAlbum, fetchRecommendations,
   fetchCircles, fetchCircle,
   getTags,
   fetchUser, getUserFavorites, getUserFollowingCircles, getUserFollowingUsers,

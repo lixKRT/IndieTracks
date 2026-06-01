@@ -67,6 +67,12 @@ public class AlbumService {
         return detail;
     }
 
+    public List<AlbumListItem> getRandomRecommendations(Integer albumId, int limit) {
+        List<AlbumListItem> results = albumMapper.selectRandomAlbums(albumId, limit);
+        urlPresign.presignAlbumList(results);
+        return results;
+    }
+
     private String getObjectKeyFromTrack(AlbumDetail.TrackInfo track, Album album) {
         if (track.getFile_type() == null) return null;
         String prefix = "preview".equals(track.getFile_type()) ? "audio/preview/" : "audio/full/";
