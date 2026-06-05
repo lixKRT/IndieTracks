@@ -101,6 +101,15 @@
                 >
                   {{ isPurchased ? '已拥有' : (album.price > 0 ? `¥${album.price} 购买` : '免费领取') }}
                 </button>
+                <button
+                  v-if="!isPurchased"
+                  class="cart-btn-detail"
+                  :class="{ 'in-cart': isInCart }"
+                  @click="handleToggleCart"
+                >
+                  <i class="fas fa-shopping-cart"></i>
+                  {{ isInCart ? '已在购物车' : '加入购物车' }}
+                </button>
                 <ul class="buy-info">
                   <li>全曲在线串流试听</li>
                   <li v-if="!isPurchased">购买后永久拥有</li>
@@ -160,7 +169,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchAlbum, fetchRecommendations, fetchCircle, fetchComments, addComment, updateComment, deleteComment, checkCircleFollow, followCircle, unfollowCircle, purchaseAlbum, checkPurchased } from '../api'
+import { fetchAlbum, fetchRecommendations, fetchCircle, fetchComments, addComment, updateComment, deleteComment, checkCircleFollow, followCircle, unfollowCircle, purchaseAlbum, checkPurchased, addToCart, removeFromCart, checkInCart } from '../api'
 import { usePlayerStore } from '../stores/player.js'
 import { useFavoriteStore } from '../stores/favorite.js'
 import { useUserStore } from '../stores/user.js'
@@ -184,6 +193,7 @@ const loading = ref(true)
 const recommendList = ref([])
 const circleDetail = ref(null)
 const isPurchased = ref(false)
+const isInCart = ref(false)
 const showPurchaseModal = ref(false)
 const purchasing = ref(false)
 const isCircleFollowed = ref(false)
@@ -212,6 +222,11 @@ async function loadAlbum() {
       try {
         const purchaseStatus = await checkPurchased(album.value.album_id)
         isPurchased.value = purchaseStatus.owned
+      } catch { /* ignore */ }
+      // 检查购物车状态
+      try {
+        const cartStatus = await checkInCart(album.value.album_id)
+        isInCart.value = cartStatus.in_cart
       } catch { /* ignore */ }
     }
 
@@ -363,6 +378,27 @@ async function handlePurchaseConfirm() {
     alert('购买失败，请重试')
   } finally {
     purchasing.value = false
+  }
+}
+
+async function handleToggleCart() {
+  if (!userStore.isLoggedIn) {
+    alert('请先登录')
+    return
+  }
+  try {
+    if (isInCart.value) {
+      await removeFromCart(album.value.album_id)
+      isInCart.value = false
+    } else {
+      await addToCart(album.value.album_id)
+      isInCart.value = true
+    }
+    // 更新 Navbar 角标
+    window.dispatchEvent(new CustomEvent('cart-updated'))
+  } catch (e) {
+    console.error('操作失败:', e)
+    alert('操作失败，请重试')
   }
 }
 
@@ -727,6 +763,30 @@ onMounted(() => {
   border-color: var(--color-border);
   color: var(--color-text-dim);
   cursor: not-allowed;
+}
+
+.cart-btn-detail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: all 0.2s;
+}
+.cart-btn-detail:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.cart-btn-detail.in-cart {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .buy-info {

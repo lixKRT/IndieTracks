@@ -23,17 +23,20 @@
 
           <!-- 已登录 -->
           <div v-if="userStore.isLoggedIn" class="user-menu">
-            <router-link to="/cart" class="cart-icon" @click="mobileOpen = false">
-              <i class="fas fa-shopping-cart"></i>
-              <span v-if="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
-            </router-link>
-            <div class="user-info" @click="showDropdown = !showDropdown">
-              <img v-if="userStore.user?.avatar_url" :src="userStore.user.avatar_url" class="user-avatar" />
-              <span v-else class="user-avatar-placeholder"><i class="fas fa-user"></i></span>
-              <span class="user-name">{{ userStore.user?.username }}</span>
+            <div class="user-actions">
+              <router-link to="/cart" class="cart-icon" @click="mobileOpen = false">
+                <i class="fas fa-shopping-cart"></i>
+                <span v-if="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
+              </router-link>
+              <div class="user-info" @click="showDropdown = !showDropdown">
+                <img v-if="userStore.user?.avatar_url" :src="userStore.user.avatar_url" class="user-avatar" />
+                <span v-else class="user-avatar-placeholder"><i class="fas fa-user"></i></span>
+                <span class="user-name">{{ userStore.user?.username }}</span>
+              </div>
             </div>
             <div v-if="showDropdown" class="dropdown">
               <router-link :to="`/user/${userStore.user?.user_id}`" class="dropdown-item" @click="showDropdown = false">个人主页</router-link>
+              <router-link to="/cart" class="dropdown-item" @click="showDropdown = false">购物车</router-link>
               <button class="dropdown-item" @click="handleLogout">退出登录</button>
             </div>
           </div>
@@ -73,6 +76,12 @@ export default {
         }
       }
     }
+  },
+  mounted() {
+    window.addEventListener('cart-updated', this.loadCartCount);
+  },
+  beforeUnmount() {
+    window.removeEventListener('cart-updated', this.loadCartCount);
   },
   methods: {
     onSearch() {
@@ -136,6 +145,7 @@ export default {
 
 /* 用户菜单 */
 .user-menu { position: relative; }
+.user-actions { display: flex; align-items: center; gap: 0.5rem; }
 .user-info { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.3rem 0.6rem; transition: background 0.2s; }
 .user-info:hover { background: rgba(255,255,255,0.05); }
 .user-avatar { width: 40px; height: 40px; object-fit: cover }

@@ -8,8 +8,8 @@ User=root
 WorkingDirectory=/root/IndieTracks/backend
 EnvironmentFile=/root/IndieTracks/scripts/linux/.env
 ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar target/backend-0.0.1-SNAPSHOT.jar --spring.config.location=file:./application-prod.properties
-Restart=always
-RestartSec=5
+Restart=on-failure
+RestartSec=10
 StandardOutput=journal
 StandardError=journal
 

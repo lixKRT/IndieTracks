@@ -22,11 +22,13 @@
         :loadingMore="loadingMore"
         :hasMore="albums.length < totalAlbums"
         :favorited-ids="favorite.favoriteAlbumIds"
+        :cart-ids="cartIds"
         @album-click="goToAlbum"
         @circle-click="goToCircle"
         @tag-click="goToTag"
         @preview="handlePreview"
         @toggle-favorite="handleToggleFavorite"
+        @toggle-cart="handleToggleCart"
         @load-more="loadMore"
       />
     </section>
@@ -63,9 +65,10 @@
 <script>
 import AlbumGrid from '../components/organisms/AlbumGrid.vue';
 import HeroSection from '../components/organisms/HeroSection.vue';
-import { fetchAlbums, fetchCircles } from '../api';
+import { fetchAlbums, fetchCircles, getCart, addToCart, removeFromCart } from '../api';
 import { usePlayerStore } from '../stores/player.js';
 import { useFavoriteStore } from '../stores/favorite.js';
+import { useUserStore } from '../stores/user.js';
 import { useNavigation } from '../composables/navigation.js';
 import { useAuthGuard } from '../composables/authGuard.js';
 import { usePreviewPlay } from '../composables/previewPlay.js';
@@ -84,7 +87,8 @@ export default {
       featuredCircles: [],
       circlesCount: 0,
       displayAlbums: 0,
-      displayCircles: 0
+      displayCircles: 0,
+      cartIds: []
     };
   },
   computed: {
@@ -99,11 +103,11 @@ export default {
   setup() {
     const player = usePlayerStore();
     const favorite = useFavoriteStore();
+    const userStore = useUserStore();
     const { goToAlbum, goToCircle, goToTag, goToCircleById } = useNavigation();
     const { guard } = useAuthGuard();
     const { addPreview } = usePreviewPlay();
-    return { player, favorite, goToAlbum, goToCircle, goToTag, goToCircleById, guard, addPreview };
-
+    return { player, favorite, userStore, goToAlbum, goToCircle, goToTag, goToCircleById, guard, addPreview };
   },
   async mounted() {
     await this.loadData();
@@ -120,6 +124,14 @@ export default {
         const circleResult = await fetchCircles();
         this.featuredCircles = circleResult.data.slice(0, 4);
         this.circlesCount = circleResult.data.length;
+
+        // 加载购物车状态
+        if (this.userStore.isLoggedIn) {
+          try {
+            const cartResult = await getCart();
+            this.cartIds = (cartResult || []).map(item => item.album_id);
+          } catch { /* ignore */ }
+        }
 
         this.animateCount('displayAlbums', this.totalAlbums, 1200);
         this.animateCount('displayCircles', this.circlesCount, 1000);
@@ -162,6 +174,19 @@ export default {
         () => this.favorite.toggleFavorite(album.album_id),
         () => alert('请先登录')
       );
+    },
+    async handleToggleCart(album) {
+      await this.guard(async () => {
+        if (this.cartIds.includes(album.album_id)) {
+          await removeFromCart(album.album_id);
+          this.cartIds = this.cartIds.filter(id => id !== album.album_id);
+        } else {
+          await addToCart(album.album_id);
+          this.cartIds.push(album.album_id);
+        }
+        // 更新 Navbar 角标
+        window.dispatchEvent(new CustomEvent('cart-updated'));
+      }, () => alert('请先登录'));
     },
     scrollToLatest() {
       this.$refs.latestSection?.scrollIntoView({ behavior: 'smooth' });
