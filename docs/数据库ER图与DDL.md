@@ -1,7 +1,7 @@
 # IndieTracks 数据库 ER 图与 DDL
 
-> 更新：2026-05-26
-> PostgreSQL 18，14 张表
+> 更新：2026-06-05
+> PostgreSQL 18，15 张表
 
 ---
 
@@ -14,7 +14,7 @@
 | `albums` | `album_id` SERIAL | `dizzylab_id` UNIQUE | `info_title`/`info_content` 替代 description |
 | `tags` | `tag_id` SERIAL | `name` UNIQUE | 标签（已去 `#`） |
 
-## 关联表（6 张）
+## 关联表（7 张）
 
 | 表 | 主键 | 说明 |
 |:---|:---|:---|
@@ -23,6 +23,7 @@
 | `album_tags` | (album_id, tag_id) | 专辑-标签（多对多） |
 | `owned_albums` | (user_id, album_id) | 已购 |
 | `favorites` | (user_id, album_id) | 收藏 |
+| `cart_items` | (user_id, album_id) | 购物车（临时关联，结算后清空） |
 | `circle_follows` | (user_id, circle_id) | 关注社团 |
 
 ## 数据表（3 张）
@@ -38,6 +39,7 @@
 ```
 users ──┬── owned_albums ──── albums
         ├── favorites ──────── albums
+        ├── cart_items ─────── albums
         ├── comments ───────── albums
         ├── user_circles ───── circles
         ├── circle_follows ─── circles
@@ -48,7 +50,7 @@ albums ──┬── work_files
          └── album_circles ─── circles
 ```
 
-## 索引（14 条）
+## 索引（16 条）
 
 - `albums(dizzylab_id)` UNIQUE
 - `users(dizzylab_user_id)` UNIQUE
@@ -58,6 +60,7 @@ albums ──┬── work_files
 - `favorites(user_id)`
 - `albums(publish_date)`
 - `owned_albums(user_id)`, `owned_albums(album_id)`
+- `cart_items(user_id)`, `cart_items(album_id)`
 - `circle_follows(user_id)`, `circle_follows(circle_id)`
 - `user_follows(user_id)`, `user_follows(followed_user_id)`
 
