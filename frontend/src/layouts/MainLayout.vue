@@ -139,8 +139,9 @@ export default {
 
 <style scoped>
 .layout-main {
-  min-height: calc(100vh - 200px);
+  min-height: 100vh;
   padding-bottom: 80px;
+  overflow-anchor: none;
 }
 
 .modal-overlay {

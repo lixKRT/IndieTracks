@@ -180,6 +180,7 @@ export default {
   background: var(--color-bg-secondary);
   border-top: 1px solid var(--color-border);
   z-index: 200;
+  will-change: transform;
 }
 
 audio { display: none; }
