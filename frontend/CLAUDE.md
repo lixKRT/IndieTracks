@@ -49,6 +49,12 @@ src/
 - 字体：Inter / PingFang SC / Microsoft YaHei
 - 无圆角（border-radius: 0 或极小值）
 
+### 按钮风格
+
+- **播放按钮**：描边风格（`border: 1px solid accent`），hover 时填充
+- **播放中指示器**：竖条动画（3 个竖条交替伸缩）
+- **播放器控制**：描边圆形播放按钮，hover 时填充
+
 ## State Management
 
 **Player Store** (`stores/player.js`)：

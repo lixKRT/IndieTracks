@@ -214,18 +214,37 @@ audio { display: none; }
 }
 
 .player-btn {
-  background: none; border: none; color: var(--color-text-secondary);
-  font-size: 1rem; padding: var(--spacing-xs); cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  padding: var(--spacing-xs);
+  cursor: pointer;
   transition: color var(--transition-fast);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .player-btn:hover { color: var(--color-accent); }
 
 .player-btn-play {
-  width: 36px; height: 36px;
-  background: var(--color-accent); color: var(--color-text-primary);
-  display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 2px solid var(--color-accent);
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  transition: all var(--transition-fast);
 }
-.player-btn-play:hover { background: var(--color-accent-hover); color: var(--color-text-primary); }
+.player-btn-play:hover {
+  background: var(--color-accent);
+  color: var(--color-text-primary);
+}
 
 /* ---- 进度条 ---- */
 .player-progress {

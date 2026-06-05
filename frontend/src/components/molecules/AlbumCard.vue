@@ -263,21 +263,24 @@ export default {
 
 .play-btn {
   flex-shrink: 0;
-  background: var(--color-accent);
-  color: var(--color-text-primary);
-  border: none;
-  padding: 0.4rem 1rem;
-  font-size: 0.8rem;
-  font-weight: 600;
+  background: transparent;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  padding: 0.35rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  transition: background var(--transition-fast);
+  transition: all var(--transition-fast);
   margin-left: var(--spacing-sm);
 }
 
-.play-btn:hover { background: var(--color-accent-hover); }
+.play-btn:hover {
+  background: var(--color-accent);
+  color: var(--color-text-primary);
+}
 
 @media (max-width: 639px) {
   .card-top { flex-direction: column; }
