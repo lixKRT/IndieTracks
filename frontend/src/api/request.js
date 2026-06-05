@@ -114,6 +114,37 @@ export async function getUserPurchases() {
   return data;
 }
 
+// ===== 购物车 =====
+export async function getCart() {
+  const { data } = await api.get('/cart');
+  return data;
+}
+
+export async function addToCart(albumId) {
+  const { data } = await api.post(`/cart/${albumId}`);
+  return data;
+}
+
+export async function removeFromCart(albumId) {
+  const { data } = await api.delete(`/cart/${albumId}`);
+  return data;
+}
+
+export async function getCartCount() {
+  const { data } = await api.get('/cart/count');
+  return data;
+}
+
+export async function checkInCart(albumId) {
+  const { data } = await api.get(`/cart/${albumId}/status`);
+  return data;
+}
+
+export async function checkoutCart(albumIds) {
+  const { data } = await api.post('/cart/checkout', { album_ids: albumIds });
+  return data;
+}
+
 // ===== 关注社团 =====
 export async function followCircle(circleId) {
   const { data } = await api.post(`/circle-follows/${circleId}`);

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.indietracks.backend.mapper.CartMapper">
+
+    <select id="selectCartAlbums" resultType="com.indietracks.backend.dto.AlbumListItem">
+        SELECT
+            a.album_id, a.title, ac.circle_id, c.name AS circle_name,
+            c.logo_url AS circle_logo_url, a.cover_url, a.info_title, a.info_content,
+            a.price, a.publish_date,
+            COALESCE(t.tag_list, '{}') AS tags,
+            COALESCE(wf.track_count, 0) AS track_count
+        FROM cart_items ci
+        JOIN albums a ON ci.album_id = a.album_id
+        LEFT JOIN album_circles ac ON a.album_id = ac.album_id
+        LEFT JOIN circles c ON ac.circle_id = c.circle_id
+        LEFT JOIN LATERAL (
+            SELECT array_agg(t2.name ORDER BY t2.tag_id) AS tag_list
+            FROM album_tags at2
+            JOIN tags t2 ON at2.tag_id = t2.tag_id
+            WHERE at2.album_id = a.album_id
+        ) t ON true
+        LEFT JOIN LATERAL (
+            SELECT COUNT(*) AS track_count
+            FROM work_files wf2
+            WHERE wf2.album_id = a.album_id
+        ) wf ON true
+        WHERE ci.user_id = #{user_id}
+        ORDER BY ci.created_at DESC
+    </select>
+
+    <insert id="insertCartItem">
+        INSERT INTO cart_items (user_id, album_id) VALUES (#{user_id}, #{album_id})
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <delete id="deleteCartItem">
+        DELETE FROM cart_items WHERE user_id = #{user_id} AND album_id = #{album_id}
+    </delete>
+
+    <select id="countCartItem" resultType="int">
+        SELECT COUNT(*) FROM cart_items WHERE user_id = #{user_id} AND album_id = #{album_id}
+    </select>
+
+    <select id="countCartItems" resultType="int">
+        SELECT COUNT(*) FROM cart_items WHERE user_id = #{user_id}
+    </select>
+
+    <delete id="clearCart">
+        DELETE FROM cart_items WHERE user_id = #{user_id}
+    </delete>
+
+</mapper>

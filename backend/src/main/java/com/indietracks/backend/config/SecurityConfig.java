@@ -47,6 +47,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/comments/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/purchases/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/purchases").authenticated()
+                .requestMatchers("/api/cart/**").authenticated()
                 // 其他请求放行
                 .anyRequest().permitAll()
             )

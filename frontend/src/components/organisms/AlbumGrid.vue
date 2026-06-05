@@ -11,11 +11,13 @@
         :key="album.album_id"
         :album="album"
         :is-favorited="favoritedIds.includes(album.album_id)"
+        :is-in-cart="cartIds.includes(album.album_id)"
         @album-click="album => $emit('album-click', album)"
         @circle-click="album => $emit('circle-click', album)"
         @tag-click="tag => $emit('tag-click', tag)"
         @preview="album => $emit('preview', album)"
         @toggle-favorite="album => $emit('toggle-favorite', album)"
+        @toggle-cart="album => $emit('toggle-cart', album)"
       />
     </div>
 
@@ -40,9 +42,10 @@ export default {
     loading: { type: Boolean, default: true },
     loadingMore: { type: Boolean, default: false },
     hasMore: { type: Boolean, default: false },
-    favoritedIds: { type: Array, default: () => [] }
+    favoritedIds: { type: Array, default: () => [] },
+    cartIds: { type: Array, default: () => [] }
   },
-  emits: ['album-click', 'circle-click', 'tag-click', 'preview', 'load-more', 'toggle-favorite']
+  emits: ['album-click', 'circle-click', 'tag-click', 'preview', 'load-more', 'toggle-favorite', 'toggle-cart']
 };
 </script>
 

@@ -6,6 +6,7 @@ export {
   fetchComments, addComment, updateComment, deleteComment,
   getFavorites, addFavorite, removeFavorite, checkFavorite,
   purchaseAlbum, checkPurchased, getUserPurchases,
+  getCart, addToCart, removeFromCart, getCartCount, checkInCart, checkoutCart,
   followCircle, unfollowCircle, checkCircleFollow,
   followUser, unfollowUser, checkUserFollow,
   register, login, logout, fetchMe, uploadAvatar

@@ -113,6 +113,14 @@ CREATE TABLE IF NOT EXISTS owned_albums (
     PRIMARY KEY (user_id, album_id)
 );
 
+-- ── 购物车表 ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS cart_items (
+    user_id    INT REFERENCES users(user_id) ON DELETE CASCADE,
+    album_id   INT REFERENCES albums(album_id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY (user_id, album_id)
+);
+
 -- ── 用户关注用户表 ─────────────────────────────────────
 CREATE TABLE IF NOT EXISTS user_follows (
     user_id           INT REFERENCES users(user_id) ON DELETE CASCADE,
@@ -147,6 +155,8 @@ CREATE INDEX IF NOT EXISTS idx_circle_follows_user_id     ON circle_follows(user
 CREATE INDEX IF NOT EXISTS idx_circle_follows_circle_id   ON circle_follows(circle_id);
 CREATE INDEX IF NOT EXISTS idx_owned_albums_user_id       ON owned_albums(user_id);
 CREATE INDEX IF NOT EXISTS idx_owned_albums_album_id      ON owned_albums(album_id);
+CREATE INDEX IF NOT EXISTS idx_cart_items_user_id         ON cart_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_cart_items_album_id        ON cart_items(album_id);
 
 -- ── 迁移：user_pages 爬虫追踪字段（安全幂等） ──────────
 DO $$

@@ -33,6 +33,14 @@
           >
             {{ isFavorited ? '★' : '☆' }}
           </button>
+          <button
+            class="cart-btn"
+            :class="{ 'in-cart': isInCart }"
+            @click.stop="$emit('toggle-cart', album)"
+            :title="isInCart ? '已在购物车' : '加入购物车'"
+          >
+            <i class="fas fa-shopping-cart"></i>
+          </button>
           <button class="play-btn" @click="$emit('preview', album)"><i class="fas fa-play"></i> 试听</button>
         </div>
       </div>
@@ -45,9 +53,10 @@ export default {
   name: 'AlbumCard',
   props: {
     album: { type: Object, required: true },
-    isFavorited: { type: Boolean, default: false }
+    isFavorited: { type: Boolean, default: false },
+    isInCart: { type: Boolean, default: false }
   },
-  emits: ['album-click', 'circle-click', 'tag-click', 'preview', 'toggle-favorite']
+  emits: ['album-click', 'circle-click', 'tag-click', 'preview', 'toggle-favorite', 'toggle-cart']
 };
 </script>
 
@@ -207,6 +216,23 @@ export default {
 
 .favorite-btn:hover { color: var(--color-accent); }
 .favorite-btn.is-favorited { color: var(--color-accent); }
+
+.cart-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 1rem;
+}
+
+.cart-btn:hover { color: var(--color-accent); }
+.cart-btn.in-cart { color: var(--color-accent); }
 
 .album-tags {
   display: flex;

@@ -93,6 +93,8 @@ src/
 | `/labels` | `Labels.vue` | 社团卡片网格（含专辑堆叠预览） |
 | `/label/:id` | `LabelDetail.vue` | 社团详情 Hero + 成员列表 + 专辑网格 |
 | `/tag` | `TagBrowse.vue` | 标签筛选 + 专辑网格，支持 URL query 参数同步 |
+| `/user/:id` | `UserProfile.vue` | 用户页：收藏/已购买/关注 |
+| `/cart` | `CartView.vue` | 购物车：商品列表 + 结算面板 |
 
 ## PlayerBar
 

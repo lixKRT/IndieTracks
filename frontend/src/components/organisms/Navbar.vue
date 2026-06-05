@@ -23,6 +23,10 @@
 
           <!-- 已登录 -->
           <div v-if="userStore.isLoggedIn" class="user-menu">
+            <router-link to="/cart" class="cart-icon" @click="mobileOpen = false">
+              <i class="fas fa-shopping-cart"></i>
+              <span v-if="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
+            </router-link>
             <div class="user-info" @click="showDropdown = !showDropdown">
               <img v-if="userStore.user?.avatar_url" :src="userStore.user.avatar_url" class="user-avatar" />
               <span v-else class="user-avatar-placeholder"><i class="fas fa-user"></i></span>
@@ -47,15 +51,28 @@
 
 <script>
 import { useUserStore } from '../../stores/user.js';
+import { getCartCount } from '../../api';
 
 export default {
   name: 'Navbar',
   emits: ['search', 'login', 'register'],
   data() {
-    return { searchQuery: '', mobileOpen: false, showDropdown: false };
+    return { searchQuery: '', mobileOpen: false, showDropdown: false, cartCount: 0 };
   },
   setup() {
     return { userStore: useUserStore() };
+  },
+  watch: {
+    'userStore.isLoggedIn': {
+      immediate: true,
+      handler(loggedIn) {
+        if (loggedIn) {
+          this.loadCartCount();
+        } else {
+          this.cartCount = 0;
+        }
+      }
+    }
   },
   methods: {
     onSearch() {
@@ -68,7 +85,14 @@ export default {
       await this.userStore.doLogout();
       this.showDropdown = false;
       this.mobileOpen = false;
+      this.cartCount = 0;
       this.$router.push('/');
+    },
+    async loadCartCount() {
+      try {
+        const res = await getCartCount();
+        this.cartCount = res.count;
+      } catch { /* ignore */ }
     }
   }
 };
@@ -117,6 +141,35 @@ export default {
 .user-avatar { width: 40px; height: 40px; object-fit: cover }
 .user-avatar-placeholder { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--color-bg-tertiary); color: var(--color-text-dim); font-size: 1rem }
 .user-name { font-size: 0.85rem; color: var(--color-text-primary); white-space: nowrap; }
+
+.cart-icon {
+  position: relative;
+  color: var(--color-text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  text-decoration: none;
+  padding: 0.3rem;
+}
+
+.cart-icon:hover { color: var(--color-accent); }
+
+.cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  background: var(--color-accent);
+  color: var(--color-text-primary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 0 4px;
+}
 
 .dropdown { position: absolute; top: 100%; right: 0; background: var(--color-bg-secondary); border: 1px solid var(--color-border); min-width: 120px; z-index: 10; }
 .dropdown-item { display: block; width: 100%; padding: 0.5rem 1rem; background: none; border: none; color: var(--color-text-primary); font-size: 0.85rem; text-align: left; cursor: pointer; text-decoration: none; transition: background 0.2s; }

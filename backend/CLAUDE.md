@@ -77,6 +77,11 @@ com.indietracks.backend/
 | GET | `/api/purchases` | 已购专辑列表（需登录） |
 | POST | `/api/purchases/{albumId}` | 购买专辑（需登录） |
 | GET | `/api/purchases/{albumId}/status` | 检查是否已购（需登录） |
+| GET | `/api/cart` | 购物车列表（需登录） |
+| POST | `/api/cart/{albumId}` | 加入购物车（需登录） |
+| DELETE | `/api/cart/{albumId}` | 移除购物车（需登录） |
+| GET | `/api/cart/count` | 购物车数量（需登录） |
+| POST | `/api/cart/checkout` | 批量结算（需登录） |
 
 详细接口文档见 `docs/后端开发计划书.md`。
 
