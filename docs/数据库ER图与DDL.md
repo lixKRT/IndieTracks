@@ -1,7 +1,139 @@
 # IndieTracks 数据库 ER 图与 DDL
 
-> 更新：2026-06-05
-> PostgreSQL 18，15 张表
+> 更新：2026-06-09
+> PostgreSQL 18，14 张表
+
+---
+
+## ER 关系图
+
+```mermaid
+erDiagram
+    users {
+        serial user_id PK
+        int dizzylab_user_id UK
+        string username UK
+        string email UK
+        string password_hash
+        string avatar_url
+        string user_role
+        timestamp created_at
+        timestamp userpage_crawled_at
+    }
+
+    circles {
+        serial circle_id PK
+        int dizzylab_labelid UK
+        string name
+        text description
+        string logo_url
+        int owner_user_id FK
+        int member_count
+    }
+
+    albums {
+        serial album_id PK
+        string dizzylab_id UK
+        string title
+        text info_title
+        text info_content
+        decimal price
+        string cover_url
+        date publish_date
+    }
+
+    tags {
+        serial tag_id PK
+        string name UK
+    }
+
+    work_files {
+        serial file_id PK
+        int album_id FK
+        string file_name
+        string object_key
+        string file_type
+        string track_length
+        bigint file_size
+        int sort_order
+    }
+
+    comments {
+        serial comment_id PK
+        int user_id FK
+        int album_id FK
+        text content
+        timestamp created_at
+    }
+
+    user_circles {
+        int user_id PK,FK
+        int circle_id PK,FK
+    }
+
+    album_circles {
+        int album_id PK,FK
+        int circle_id PK,FK
+    }
+
+    album_tags {
+        int album_id PK,FK
+        int tag_id PK,FK
+    }
+
+    favorites {
+        int user_id PK,FK
+        int album_id PK,FK
+        timestamp created_at
+    }
+
+    owned_albums {
+        int user_id PK,FK
+        int album_id PK,FK
+        timestamp created_at
+    }
+
+    cart_items {
+        int user_id PK,FK
+        int album_id PK,FK
+        timestamp created_at
+    }
+
+    circle_follows {
+        int user_id PK,FK
+        int circle_id PK,FK
+        timestamp created_at
+    }
+
+    user_follows {
+        int user_id PK,FK
+        int followed_user_id PK,FK
+        timestamp created_at
+    }
+
+    users ||--o{ comments : "发表"
+    users ||--o{ favorites : "收藏"
+    users ||--o{ owned_albums : "拥有"
+    users ||--o{ cart_items : "加入购物车"
+    users ||--o{ user_circles : "属于"
+    users ||--o{ circle_follows : "关注"
+    users ||--o{ user_follows : "关注"
+    users ||--o{ user_follows : "被关注"
+
+    circles ||--o{ user_circles : "包含成员"
+    circles ||--o{ album_circles : "发布"
+    circles ||--o{ circle_follows : "被关注"
+
+    albums ||--o{ work_files : "包含曲目"
+    albums ||--o{ album_circles : "属于"
+    albums ||--o{ album_tags : "标记"
+    albums ||--o{ comments : "被评论"
+    albums ||--o{ favorites : "被收藏"
+    albums ||--o{ owned_albums : "被拥有"
+    albums ||--o{ cart_items : "被加入购物车"
+
+    tags ||--o{ album_tags : "标记"
+```
 
 ---
 
@@ -32,23 +164,7 @@
 |:---|:---|:---|
 | `work_files` | `album_id → albums` | 曲目，`file_type`: preview/full，`object_key` 存 MinIO 路径 |
 | `comments` | `user_id → users` SET NULL, `album_id → albums` CASCADE | 评论 |
-| `user_follows` | `user_id → users`, `followed_user_id → users` | 预留（dizzylab 无用户关注） |
-
-## 关系图
-
-```
-users ──┬── owned_albums ──── albums
-        ├── favorites ──────── albums
-        ├── cart_items ─────── albums
-        ├── comments ───────── albums
-        ├── user_circles ───── circles
-        ├── circle_follows ─── circles
-        └── user_follows ───── users (self-ref)
-
-albums ──┬── work_files
-         ├── album_tags ────── tags
-         └── album_circles ─── circles
-```
+| `user_follows` | `user_id → users`, `followed_user_id → users` | 用户关注 |
 
 ## 索引（16 条）
 
