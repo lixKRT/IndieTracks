@@ -1,10 +1,10 @@
 # IndieTracks 项目上下文
 
-> 最后更新：2026-05-31（用户系统设计）
+> 最后更新：2026-06-09
 
 ## 项目定位
 
-**IndieTracks** 是一个独立音乐作品展示与试听平台，产品形态参考 Dizzylab（dizzylab.net）。支持专辑浏览、在线试听、社团展示、用户收藏等功能。
+**IndieTracks** 是一个独立音乐作品展示与试听平台，产品形态参考 Dizzylab（dizzylab.net）。支持专辑浏览、在线试听、社团展示、用户收藏、购物车、购买等功能。
 
 ## 领域术语
 
@@ -12,7 +12,7 @@
 |:---|:---|
 | 专辑（Album） | 一组音乐作品的集合，由社团发布。包含标题、封面、价格、内容信息、曲目列表 |
 | 社团（Circle） | 音乐创作团体，发布专辑。有成员列表（UserCircle 关联） |
-| 用户（User） | 角色：`normal`（普通）或 `pro`（社团成员） |
+| 用户（User） | 角色：`normal`（普通）、`pro`（社团成员）或 `staff`（管理员） |
 | 曲目（WorkFile） | 专辑音轨。`file_type`：`preview`（试听）或 `full`（完整版） |
 | 标签（Tag） | 专辑分类标记。专辑-标签多对多 |
 | 收藏（Favorite） | 用户-专辑多对多。登录用户可收藏/取消收藏 |
@@ -27,11 +27,11 @@
 
 ## 技术约定
 
-- **字段命名**：全链路 snake_case。前端 Mock 数据 = 数据库列名 = 后端 JSON key
+- **字段命名**：全链路 snake_case。数据库列名 = 后端 JSON key = 前端字段
 - **视觉风格**：暗色扁平（背景 `#0a0a0a`，主色 `#ff6b6b`）
 - **前端**：Vue 3 + Vite 8 + Vue Router 4 + Axios + Pinia
-- **后端**：Spring Boot 4 + Java 25 + MyBatis-Plus + Undertow
-- **数据层**：PostgreSQL 18 + MinIO 对象存储（预签名 URL）
+- **后端**：Spring Boot 4 + Java 25 + MyBatis-Plus + Jetty
+- **数据层**：PostgreSQL 18 + MinIO 对象存储
 - **爬虫**：Scrapy，目标站 Dizzylab
 
 ### Dizzylab 目标页面
@@ -51,16 +51,17 @@
 - 专辑由社团发布（`album_circles`），不由用户直接发布
 - 专辑 `description` 已删除，替换为 `info_title` + `info_content`
 - 价格筛选：`price = 0` / `price > 0`，不加枚举字段
+- 14 张表：4 核心 + 7 关联 + 3 数据
 
 ## 前端架构要点
 
-### 组件分层（原子化设计，无原子层）
+### 组件分层（原子化设计）
 
 ```
-molecules → organisms → layouts → views
+atoms → molecules → organisms → layouts → views
 ```
 
-### 页面清单（Mock 阶段）
+### 页面清单
 
 | 路由 | 状态 |
 |:---|:---|
@@ -69,29 +70,25 @@ molecules → organisms → layouts → views
 | `/labels` 社团列表 | ✅ 联调完成 |
 | `/label/:id` 社团详情 | ✅ 联调完成 |
 | `/tag` 分类浏览 | ✅ 联调完成 |
-| `/user/:id` 用户页 | ⬜ 用户系统开发中 |
+| `/user/:id` 用户页 | ✅ 联调完成 |
+| `/cart` 购物车 | ✅ 联调完成 |
 
 ### Pinia Store
 
-- `player`：播放列表、当前曲目、播放/暂停、localStorage 持久化。不管理认证态。
+- `player`：播放列表、当前曲目、播放/暂停、localStorage 持久化
+- `user`：用户信息、登录/注册/登出
+- `favorite`：收藏状态管理
 
 ### 播放器
 
 - Spotify 风味底部播放条。可展开面板含曲目列表。与专辑详情曲目列表联动。
+- 描边风格播放按钮，播放中竖条动画指示器
 
 ### 响应式
 
-- 专辑网格：桌面 2 列（80% 宽，居中，列间距 5%），移动端 2 列
+- 专辑网格：桌面 2 列，移动端 2 列
 - 专辑卡片：桌面横版（60% 封面 + 40% 信息），移动端纵版（隐藏信息区）
 - Navbar：≤768px 汉堡菜单
-
-### 爬虫策略
-
-分四个独立爬虫：专辑（首期 10 张）、社团人员、收藏、增量更新。合理延时。
-
-## 已知问题
-
-- AlbumGrid 外层容器宽度未达 80% 预期，内层 grid 居中逻辑需排查父级约束或 CSS 优先级。(2026-05-15)
 
 ## 部署架构
 
@@ -105,14 +102,26 @@ molecules → organisms → layouts → views
 ```
 
 - 前端：Nginx 直接 serve 静态文件
-- 后端：Spring Boot 以 jar 包运行，Systemd 管理
+- 后端：Spring Boot 以 jar 包运行（Jetty 容器），Systemd 管理
 - 数据库：PostgreSQL 18
 - 对象存储：MinIO（二进制部署在 tools/ 目录，Nginx 代理访问）
 - 环境变量：`scripts/linux/.env` 文件管理
 - 一键部署：`bash scripts/linux/setup-all.sh`
+- 一键停止：`bash scripts/linux/stop-all.sh`
 
 ### MinIO 资源访问
 
 - 生产环境：后端返回 `/minio/indietracks/...` 相对路径，由 Nginx 代理到 MinIO
 - 开发环境：后端返回 `http://localhost:9000/indietracks/...` 完整 URL，直接访问
 - 配置方式：`minio.url-prefix` 属性，dev 用 `${minio.endpoint}`，prod 用 `/minio`
+
+### Systemd 服务依赖
+
+```
+indietracks.service
+  ├── Requires: postgresql.service
+  ├── Requires: minio.service
+  └── Requires: nginx.service
+```
+
+`systemctl start indietracks` 会自动启动所有依赖服务。
