@@ -1,12 +1,14 @@
 [Unit]
 Description=IndieTracks Backend API
-After=network.target postgresql.service
+After=network.target postgresql.service minio.service nginx.service
+Requires=postgresql.service minio.service nginx.service
 
 [Service]
 Type=simple
 User=root
 WorkingDirectory=/root/IndieTracks/backend
 EnvironmentFile=/root/IndieTracks/scripts/linux/.env
+ExecStartPre=/usr/bin/systemctl start postgresql minio nginx
 ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar target/backend-0.0.1-SNAPSHOT.jar --spring.config.location=file:./application-prod.properties
 Restart=on-failure
 RestartSec=10
