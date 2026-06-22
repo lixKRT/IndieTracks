@@ -7,6 +7,7 @@ import com.indietracks.backend.entity.Album;
 import com.indietracks.backend.mapper.AlbumMapper;
 import com.indietracks.backend.mapper.CircleMapper;
 import com.indietracks.backend.util.UrlPresignHelper;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,11 +21,13 @@ public class AdminAlbumService {
     private final AlbumMapper albumMapper;
     private final CircleMapper circleMapper;
     private final UrlPresignHelper urlPresign;
+    private final JdbcTemplate jdbcTemplate;
 
-    public AdminAlbumService(AlbumMapper albumMapper, CircleMapper circleMapper, UrlPresignHelper urlPresign) {
+    public AdminAlbumService(AlbumMapper albumMapper, CircleMapper circleMapper, UrlPresignHelper urlPresign, JdbcTemplate jdbcTemplate) {
         this.albumMapper = albumMapper;
         this.circleMapper = circleMapper;
         this.urlPresign = urlPresign;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     /**
@@ -142,5 +145,40 @@ public class AdminAlbumService {
      */
     public void deleteAlbum(Integer albumId) {
         albumMapper.deleteById(albumId);
+    }
+
+    /**
+     * 添加专辑标签
+     */
+    public void addAlbumTag(Integer albumId, String tagName) {
+        if (tagName == null || tagName.isBlank()) return;
+        // 先查找或创建标签
+        Integer tagId = jdbcTemplate.queryForObject(
+            "SELECT tag_id FROM tags WHERE name = ?", Integer.class, tagName);
+        if (tagId == null) {
+            jdbcTemplate.update("INSERT INTO tags (name) VALUES (?)", tagName);
+            tagId = jdbcTemplate.queryForObject(
+                "SELECT tag_id FROM tags WHERE name = ?", Integer.class, tagName);
+        }
+        // 添加关联
+        jdbcTemplate.update(
+            "INSERT INTO album_tags (album_id, tag_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
+            albumId, tagId);
+    }
+
+    /**
+     * 移除专辑标签
+     */
+    public void removeAlbumTag(Integer albumId, Integer tagId) {
+        jdbcTemplate.update(
+            "DELETE FROM album_tags WHERE album_id = ? AND tag_id = ?",
+            albumId, tagId);
+    }
+
+    /**
+     * 删除曲目
+     */
+    public void deleteTrack(Integer trackId) {
+        jdbcTemplate.update("DELETE FROM work_files WHERE file_id = ?", trackId);
     }
 }

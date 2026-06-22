@@ -35,7 +35,10 @@ public class AdminDashboardService {
     public Map<String, Object> getStaffStats() {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalUsers", userMapper.selectCount(null));
-        stats.put("totalAlbums", albumMapper.selectCount(null));
+        // 只统计有内容的专辑
+        Integer albumCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM albums WHERE info_title IS NOT NULL OR info_content IS NOT NULL", Integer.class);
+        stats.put("totalAlbums", albumCount != null ? albumCount : 0);
         stats.put("totalCircles", circleMapper.selectCircleCount());
         stats.put("totalComments", commentMapper.selectCount(null));
         stats.put("totalFavorites", favoriteMapper.selectCount(null));
@@ -64,7 +67,7 @@ public class AdminDashboardService {
 
     public List<Map<String, Object>> getStaffTopAlbums(String period, int limit) {
         String dateFilter = getDateFilter(period);
-        return jdbcTemplate.queryForList(
+        List<Map<String, Object>> albums = jdbcTemplate.queryForList(
             "SELECT a.album_id, a.title, a.cover_url, c.name AS circle_name, " +
             "COALESCE(f.fav_count, 0) AS favorite_count " +
             "FROM albums a " +
@@ -74,11 +77,15 @@ public class AdminDashboardService {
             "WHERE (a.info_title IS NOT NULL OR a.info_content IS NOT NULL) " +
             "AND a.publish_date >= " + dateFilter + " " +
             "ORDER BY favorite_count DESC LIMIT " + limit);
+        for (Map<String, Object> album : albums) {
+            applyUrlPrefix(album, "cover_url");
+        }
+        return albums;
     }
 
     public List<Map<String, Object>> getStaffTopCircles(String period, int limit) {
         String dateFilter = getDateFilter(period);
-        return jdbcTemplate.queryForList(
+        List<Map<String, Object>> circles = jdbcTemplate.queryForList(
             "SELECT c.circle_id, c.name, c.logo_url, c.member_count, " +
             "COALESCE(ac.album_count, 0) AS album_count " +
             "FROM circles c " +
@@ -86,6 +93,10 @@ public class AdminDashboardService {
             "JOIN albums a ON ac2.album_id = a.album_id WHERE a.publish_date >= " + dateFilter +
             " GROUP BY circle_id) ac ON c.circle_id = ac.circle_id " +
             "ORDER BY album_count DESC LIMIT " + limit);
+        for (Map<String, Object> circle : circles) {
+            applyUrlPrefix(circle, "logo_url");
+        }
+        return circles;
     }
 
     public List<Map<String, Object>> getStaffTagDistribution() {
@@ -189,5 +200,12 @@ public class AdminDashboardService {
             case "month" -> "CURRENT_DATE - INTERVAL '30 days'";
             default -> "'2000-01-01'";
         };
+    }
+
+    private void applyUrlPrefix(Map<String, Object> item, String field) {
+        Object value = item.get(field);
+        if (value instanceof String url && !url.isBlank() && !url.startsWith("http") && !url.startsWith("/minio")) {
+            item.put(field, "/minio/indietracks/" + url);
+        }
     }
 }

@@ -71,4 +71,26 @@ public class AdminAlbumController {
         albumService.deleteAlbum(id);
         return ResponseEntity.ok(Map.of("message", "专辑删除成功"));
     }
+
+    // ===== 标签管理 =====
+
+    @PostMapping("/{id}/tags")
+    public ResponseEntity<?> addTag(@PathVariable Integer id, @RequestBody Map<String, String> body) {
+        albumService.addAlbumTag(id, body.get("name"));
+        return ResponseEntity.ok(Map.of("message", "标签添加成功"));
+    }
+
+    @DeleteMapping("/{id}/tags/{tagId}")
+    public ResponseEntity<?> removeTag(@PathVariable Integer id, @PathVariable Integer tagId) {
+        albumService.removeAlbumTag(id, tagId);
+        return ResponseEntity.ok(Map.of("message", "标签删除成功"));
+    }
+
+    // ===== 曲目管理 =====
+
+    @DeleteMapping("/{id}/tracks/{trackId}")
+    public ResponseEntity<?> deleteTrack(@PathVariable Integer id, @PathVariable Integer trackId) {
+        albumService.deleteTrack(trackId);
+        return ResponseEntity.ok(Map.of("message", "曲目删除成功"));
+    }
 }
