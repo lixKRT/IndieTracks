@@ -158,6 +158,59 @@ com.indietracks.backend/
 | PUT | `/api/comments/{id}` | 编辑评论 |
 | DELETE | `/api/comments/{id}` | 删除评论 |
 
+### 管理接口（/api/admin/*）
+
+#### Dashboard
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/admin/dashboard/stats` | 统计数据 |
+| GET | `/api/admin/dashboard/trends` | 趋势数据 |
+| GET | `/api/admin/dashboard/top-albums` | 热门专辑排行 |
+| GET | `/api/admin/dashboard/top-circles` | 活跃社团排行 |
+| GET | `/api/admin/dashboard/tag-distribution` | 标签分布 |
+
+#### 专辑管理
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/admin/albums` | 专辑列表（分页+筛选） |
+| POST | `/api/admin/albums` | 新增专辑 |
+| PUT | `/api/admin/albums/{id}` | 编辑专辑 |
+| DELETE | `/api/admin/albums/{id}` | 删除专辑 |
+| POST | `/api/admin/albums/{id}/tracks` | 上传曲目 |
+| DELETE | `/api/admin/albums/{id}/tracks/{trackId}` | 删除曲目 |
+
+#### 社团管理（Staff）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/admin/circles` | 社团列表 |
+| POST | `/api/admin/circles` | 新增社团 |
+| PUT | `/api/admin/circles/{id}` | 编辑社团 |
+| DELETE | `/api/admin/circles/{id}` | 删除社团 |
+| GET | `/api/admin/circles/{id}/members` | 社团成员列表 |
+| POST | `/api/admin/circles/{id}/members` | 添加成员 |
+| DELETE | `/api/admin/circles/{id}/members/{userId}` | 移除成员 |
+
+#### 用户管理（Staff）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/admin/users` | 用户列表 |
+| PUT | `/api/admin/users/{id}` | 编辑用户 |
+| DELETE | `/api/admin/users/{id}` | 删除用户 |
+
+#### 标签管理
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/admin/tags` | 标签列表 |
+| POST | `/api/admin/tags` | 新增标签 |
+| PUT | `/api/admin/tags/{id}` | 编辑标签 |
+| DELETE | `/api/admin/tags/{id}` | 删除标签 |
+
+#### 评论管理
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/admin/comments` | 评论列表 |
+| DELETE | `/api/admin/comments/{id}` | 删除评论 |
+
 ## Configuration
 
 - `application.properties`：开发配置（数据库、MinIO、JWT）

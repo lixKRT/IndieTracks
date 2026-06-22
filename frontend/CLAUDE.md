@@ -107,6 +107,15 @@ src/
 | `/tag` | `TagBrowse.vue` | 标签筛选 + 专辑网格，支持 URL query 参数同步 |
 | `/user/:id` | `UserProfile.vue` | 用户页：收藏/已购买/关注 |
 | `/cart` | `CartView.vue` | 购物车：商品列表 + 结算面板 |
+| `/admin` | `Dashboard.vue` | 数据透视页（pro, staff） |
+| `/admin/albums` | `AlbumList.vue` | 专辑管理列表（pro, staff） |
+| `/admin/albums/create` | `AlbumForm.vue` | 新增专辑（pro, staff） |
+| `/admin/albums/:id/edit` | `AlbumForm.vue` | 编辑专辑（pro, staff） |
+| `/admin/circles` | `CircleList.vue` | 社团管理列表（staff） |
+| `/admin/circles/:id` | `CircleDetail.vue` | 社团详情/成员管理（staff） |
+| `/admin/users` | `UserList.vue` | 用户管理列表（staff） |
+| `/admin/tags` | `TagList.vue` | 标签管理列表（pro, staff） |
+| `/admin/comments` | `CommentList.vue` | 评论管理列表（pro, staff） |
 | `/:pathMatch(.*)*` | `NotFound.vue` | 404 页面 |
 
 ## Components

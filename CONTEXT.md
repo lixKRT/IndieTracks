@@ -21,6 +21,7 @@
 | 关注用户（UserFollow） | 用户-用户多对多。登录用户可关注/取消关注 |
 | 购物车（Cart） | 用户-专辑临时关联。登录用户可加入/移除，结算后清空并生成拥有记录 |
 | 拥有（OwnedAlbum） | 用户-专辑永久关联。购买或领取后记录，表示用户拥有该专辑 |
+| 信息管理系统（Admin CMS） | 后台管理平台，Pro 管理所属社团专辑，Staff 管理全部数据 |
 | 专辑内容信息 | `info_title`（TEXT）和 `info_content`（TEXT）。爬虫原样入库，非必填 |
 | JWT | HttpOnly Cookie 传递，普通登录 7 天有效期，"记住我"30 天 |
 | BCrypt | 密码加密算法，Spring Security 内置支持 |
