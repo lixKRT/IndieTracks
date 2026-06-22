@@ -166,4 +166,15 @@
         LIMIT #{limit}
     </select>
 
+    <!-- 专辑所属社团 ID 列表 -->
+    <select id="selectCircleIdsByAlbumId" resultType="java.lang.Integer">
+        SELECT circle_id FROM album_circles WHERE album_id = #{album_id}
+    </select>
+
+    <!-- 插入专辑-社团关联 -->
+    <insert id="insertAlbumCircle">
+        INSERT INTO album_circles (album_id, circle_id) VALUES (#{album_id}, #{circle_id})
+        ON CONFLICT DO NOTHING
+    </insert>
+
 </mapper>

@@ -39,4 +39,8 @@ public interface AlbumMapper extends BaseMapper<Album> {
     int countCommentsByAlbumId(@Param("album_id") Integer album_id);
 
     List<AlbumListItem> selectRandomAlbums(@Param("album_id") Integer album_id, @Param("limit") int limit);
+
+    List<Integer> selectCircleIdsByAlbumId(@Param("album_id") Integer album_id);
+
+    int insertAlbumCircle(@Param("album_id") Integer album_id, @Param("circle_id") Integer circle_id);
 }

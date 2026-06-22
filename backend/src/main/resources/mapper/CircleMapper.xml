@@ -67,4 +67,9 @@
         ORDER BY u.user_id
     </select>
 
+    <!-- 用户所属社团 ID 列表 -->
+    <select id="selectCircleIdsByUserId" resultType="java.lang.Integer">
+        SELECT circle_id FROM user_circles WHERE user_id = #{user_id}
+    </select>
+
 </mapper>

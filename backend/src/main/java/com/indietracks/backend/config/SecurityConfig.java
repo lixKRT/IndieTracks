@@ -48,6 +48,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/purchases/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/purchases").authenticated()
                 .requestMatchers("/api/cart/**").authenticated()
+                // 管理接口 - 需要 pro 或 staff 角色
+                .requestMatchers("/api/admin/**").hasAnyAuthority("ROLE_pro", "ROLE_staff")
+                // 仅 staff 可访问的接口
+                .requestMatchers("/api/admin/circles/**").hasAuthority("ROLE_staff")
+                .requestMatchers("/api/admin/users/**").hasAuthority("ROLE_staff")
                 // 其他请求放行
                 .anyRequest().permitAll()
             )

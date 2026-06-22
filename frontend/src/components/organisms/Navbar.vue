@@ -37,6 +37,12 @@
             <div v-if="showDropdown" class="dropdown">
               <router-link :to="`/user/${userStore.user?.user_id}`" class="dropdown-item" @click="showDropdown = false">个人主页</router-link>
               <router-link to="/cart" class="dropdown-item" @click="showDropdown = false">购物车</router-link>
+              <router-link
+                v-if="userStore.user?.user_role === 'pro' || userStore.user?.user_role === 'staff'"
+                to="/admin"
+                class="dropdown-item admin-link"
+                @click="showDropdown = false"
+              >管理后台</router-link>
               <button class="dropdown-item" @click="handleLogout">退出登录</button>
             </div>
           </div>
@@ -184,6 +190,7 @@ export default {
 .dropdown { position: absolute; top: 100%; right: 0; background: var(--color-bg-secondary); border: 1px solid var(--color-border); min-width: 120px; z-index: 10; }
 .dropdown-item { display: block; width: 100%; padding: 0.5rem 1rem; background: none; border: none; color: var(--color-text-primary); font-size: 0.85rem; text-align: left; cursor: pointer; text-decoration: none; transition: background 0.2s; }
 .dropdown-item:hover { background: rgba(255,255,255,0.05); color: var(--color-accent); }
+.admin-link { border-top: 1px solid var(--color-border); color: var(--color-accent); }
 
 @media (max-width: 768px) {
   .hamburger { display: flex; }
