@@ -27,7 +27,7 @@
           <i class="fas fa-user"></i>
           <span>用户管理</span>
         </router-link>
-        <router-link to="/admin/tags" class="nav-item" active-class="active">
+        <router-link v-if="isStaff" to="/admin/tags" class="nav-item" active-class="active">
           <i class="fas fa-tag"></i>
           <span>标签管理</span>
         </router-link>

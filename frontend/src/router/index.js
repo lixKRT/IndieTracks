@@ -122,12 +122,15 @@ router.beforeEach((to, from, next) => {
       return;
     }
 
-    // 检查角色权限
-    const requiredRoles = to.matched.find(record => record.meta.roles)?.meta.roles;
-    if (requiredRoles && !requiredRoles.includes(userStore.user?.user_role)) {
-      alert('无权访问');
-      next('/');
-      return;
+    // 检查角色权限 - 使用最具体的路由（最后一个有 roles 的）
+    const roleRecords = to.matched.filter(record => record.meta.roles);
+    if (roleRecords.length > 0) {
+      const requiredRoles = roleRecords[roleRecords.length - 1].meta.roles;
+      if (!requiredRoles.includes(userStore.user?.user_role)) {
+        alert('无权访问');
+        next('/');
+        return;
+      }
     }
   }
 
