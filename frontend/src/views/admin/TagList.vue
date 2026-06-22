@@ -7,6 +7,11 @@
       </button>
     </div>
 
+    <div class="search-bar">
+      <input type="text" v-model="searchQuery" placeholder="搜索标签名..." class="search-input" @keyup.enter="loadTags" />
+      <button class="btn-search" @click="loadTags"><i class="fas fa-search"></i></button>
+    </div>
+
     <LoadingSpinner v-if="loading" />
 
     <template v-else>
@@ -74,7 +79,8 @@ export default {
       tags: [],
       loading: true,
       showCreate: false,
-      newTagName: ''
+      newTagName: '',
+      searchQuery: ''
     };
   },
   async mounted() {
@@ -84,7 +90,7 @@ export default {
     async loadTags() {
       this.loading = true;
       try {
-        const result = await getAdminTags();
+        const result = await getAdminTags({ search: this.searchQuery || undefined });
         this.tags = result.data || result || [];
       } catch (e) {
         console.error('加载标签失败:', e);
@@ -151,6 +157,40 @@ export default {
 
 .btn-create:hover {
   background: var(--color-accent-hover);
+}
+
+.search-bar {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.search-input {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.btn-search {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-search:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .data-table {

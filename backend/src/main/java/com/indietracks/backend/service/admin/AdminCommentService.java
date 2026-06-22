@@ -35,6 +35,11 @@ public class AdminCommentService {
             "ORDER BY cm.created_at DESC " +
             "LIMIT " + pageSize + " OFFSET " + offset);
 
+        // 应用 URL 前缀
+        for (Map<String, Object> comment : comments) {
+            applyUrlPrefix(comment, "avatar_url");
+        }
+
         Integer total = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM comments", Integer.class);
 
         Map<String, Object> result = new HashMap<>();
@@ -71,6 +76,11 @@ public class AdminCommentService {
             "ORDER BY cm.created_at DESC " +
             "LIMIT " + pageSize + " OFFSET " + offset);
 
+        // 应用 URL 前缀
+        for (Map<String, Object> comment : comments) {
+            applyUrlPrefix(comment, "avatar_url");
+        }
+
         Integer total = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM comments cm JOIN album_circles ac ON cm.album_id = ac.album_id WHERE ac.circle_id IN (" + circleIdStr + ")",
             Integer.class);
@@ -97,5 +107,12 @@ public class AdminCommentService {
 
     public void deleteComment(Integer commentId) {
         commentMapper.deleteById(commentId);
+    }
+
+    private void applyUrlPrefix(Map<String, Object> item, String field) {
+        Object value = item.get(field);
+        if (value instanceof String url && !url.isBlank() && !url.startsWith("http") && !url.startsWith("/minio")) {
+            item.put(field, "/minio/indietracks/" + url);
+        }
     }
 }

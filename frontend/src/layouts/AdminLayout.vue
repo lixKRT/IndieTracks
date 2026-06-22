@@ -198,6 +198,24 @@ export default {
   flex: 1;
   padding: var(--spacing-xl);
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.admin-main::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-main::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}
+
+.admin-main::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-dim);
 }
 
 @media (max-width: 768px) {

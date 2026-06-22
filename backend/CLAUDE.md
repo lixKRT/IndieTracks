@@ -176,8 +176,17 @@ com.indietracks.backend/
 | POST | `/api/admin/albums` | 新增专辑 |
 | PUT | `/api/admin/albums/{id}` | 编辑专辑 |
 | DELETE | `/api/admin/albums/{id}` | 删除专辑 |
-| POST | `/api/admin/albums/{id}/tracks` | 上传曲目 |
+| POST | `/api/admin/albums/{id}/tags` | 添加专辑标签 |
+| DELETE | `/api/admin/albums/{id}/tags/{tagId}` | 移除专辑标签 |
 | DELETE | `/api/admin/albums/{id}/tracks/{trackId}` | 删除曲目 |
+
+#### 文件上传
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/api/admin/upload/cover` | 上传封面 |
+| POST | `/api/admin/upload/avatar` | 上传头像 |
+| POST | `/api/admin/upload/logo` | 上传社团 Logo |
+| POST | `/api/admin/upload/audio` | 上传音频 |
 
 #### 社团管理（Staff）
 | 方法 | 路径 | 说明 |

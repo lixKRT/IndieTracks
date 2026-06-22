@@ -96,6 +96,14 @@ src/
 - 关注：followCircle, unfollowCircle, checkCircleFollow, followUser, unfollowUser, checkUserFollow
 - 认证：register, login, logout, fetchMe, uploadAvatar
 
+`api/admin.js` 导出管理接口函数，覆盖：
+- Dashboard：getDashboardStats, getDashboardTrends, getTopAlbums, getTopCircles, getTagDistribution
+- 专辑管理：getAdminAlbums, createAlbum, updateAlbum, deleteAlbum
+- 社团管理：getAdminCircles, createCircle, updateCircle, deleteCircle, getCircleMembers, addCircleMember, removeCircleMember
+- 用户管理：getAdminUsers, updateUser, deleteUser
+- 标签管理：getAdminTags, createTag, updateTag, deleteTag
+- 评论管理：getAdminComments, deleteComment
+
 ## Routes
 
 | Path | View | 说明 |
