@@ -69,3 +69,7 @@ tools\minio\minio.exe
 tools\minio\mc.exe
 
 scripts\windows\__pycache__
+
+docs\轻量级框架应用开发课设文档模板.docx
+test-reports
+test-cases
