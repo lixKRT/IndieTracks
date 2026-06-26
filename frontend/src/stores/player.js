@@ -1,6 +1,8 @@
+// 播放器 Store — Spotify 风格底部播放栏，localStorage 持久化播放列表
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
 
+// localStorage 持久化 key，保存 playlist 和 current_index
 const STORAGE_KEY = 'indietracks_player';
 
 function loadState() {
@@ -24,8 +26,10 @@ function saveState(state) {
 export const usePlayerStore = defineStore('player', () => {
   const saved = loadState();
 
+  // 持久化状态：播放列表和当前索引
   const playlist = ref(saved?.playlist ?? []);
   const current_index = ref(saved?.current_index ?? -1);
+  // 非持久化状态：播放和展开状态每次刷新重置
   const is_playing = ref(false);
   const is_expanded = ref(false);
 
@@ -40,6 +44,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   // 添加整张专辑的 preview 曲目到播放列表末尾
   function addAlbumTracks(tracks, start_index) {
+    // 只加载 preview 类型（dizzylab 提供的 30s 试听片段）
     const preview_tracks = tracks.filter(t => t.file_type === 'preview');
     if (preview_tracks.length === 0) return;
 
@@ -50,6 +55,7 @@ export const usePlayerStore = defineStore('player', () => {
 
   // 替换播放列表为整张专辑曲目，从指定曲目开始播放
   function playAlbumTracks(tracks, start_index) {
+    // 只加载 preview 类型（dizzylab 提供的 30s 试听片段）
     const preview_tracks = tracks.filter(t => t.file_type === 'preview');
     if (preview_tracks.length === 0) return;
 
@@ -77,6 +83,7 @@ export const usePlayerStore = defineStore('player', () => {
     }
   }
 
+  // 循环播放：第一首的上一首是最后一首
   function prev() {
     if (playlist.value.length === 0) return;
     const idx = current_index.value <= 0
@@ -85,6 +92,7 @@ export const usePlayerStore = defineStore('player', () => {
     setCurrentIndex(idx);
   }
 
+  // 循环播放：最后一首的下一首是第一首
   function next() {
     if (playlist.value.length === 0) return;
     const idx = current_index.value >= playlist.value.length - 1
@@ -93,10 +101,12 @@ export const usePlayerStore = defineStore('player', () => {
     setCurrentIndex(idx);
   }
 
+  // 拖拽排序：移动曲目后同步修正 current_index
   function reorder(from, to) {
     const item = playlist.value.splice(from, 1)[0];
     playlist.value.splice(to, 0, item);
 
+    // 修正当前播放索引：被移动的是当前曲目 / 跨越当前曲目的移动
     if (current_index.value === from) {
       current_index.value = to;
     } else if (from < current_index.value && to >= current_index.value) {
@@ -127,7 +137,7 @@ export const usePlayerStore = defineStore('player', () => {
     is_expanded.value = !is_expanded.value;
   }
 
-  // localStorage 持久化
+  // localStorage 持久化：只保存 playlist 和 current_index，is_playing/is_expanded 不持久化
   watch(
     [playlist, current_index],
     () => {

@@ -1,3 +1,4 @@
+<!-- AdminCircleList — 管理后台社团列表，支持搜索与分页 -->
 <template>
   <div class="circle-list-page">
     <h1 class="page-title">社团管理</h1>
@@ -66,12 +67,14 @@ export default {
     async loadCircles() {
       this.loading = true;
       try {
+        // 空搜索时传 undefined，避免向后端发送空字符串参数
         const result = await getAdminCircles({ page: this.currentPage, page_size: this.pageSize, search: this.searchQuery || undefined });
         this.circles = result.data || [];
         this.totalCircles = result.total || 0;
       } catch (e) { console.error('加载社团失败:', e); }
       finally { this.loading = false; }
     },
+    // JS 截断用于表格单元格内文本，比 CSS text-overflow 更可控
     truncate(text, len) { if (!text) return '-'; return text.length > len ? text.slice(0, len) + '...' : text; }
   }
 };

@@ -1,4 +1,4 @@
-<!-- 标签筛选器（有机体） -->
+<!-- TagFilter — 标签 + 价格筛选器，emit update:tag / update:price 配合父组件 v-model 使用 -->
 <template>
   <div class="tag-filter">
     <div class="filter-tags">
@@ -15,6 +15,7 @@
         @click="$emit('update:tag', t.name)"
       >{{ t.name }}</span>
     </div>
+    <!-- 价格筛选使用语义字符串：'' 全部 / 'free' 免费 / 'paid' 付费 -->
     <div class="filter-price">
       <span class="filter-label">价格：</span>
       <span class="filter-option" :class="{ active: selectedPrice === '' }" @click="$emit('update:price', '')">全部</span>
@@ -32,6 +33,7 @@ export default {
     selectedTag: { type: String, default: '' },
     selectedPrice: { type: String, default: '' }
   },
+  // update:tag / update:price 遵循 Vue v-model 命名约定，父组件可直接 v-model:tag="xxx"
   emits: ['update:tag', 'update:price']
 };
 </script>
@@ -48,7 +50,7 @@ export default {
   transition: all var(--transition-fast);
 }
 .filter-tag:hover { color: var(--color-accent); border-color: var(--color-border); }
-.filter-tag.active { color: var(--color-accent); background: rgba(255,107,107,0.1); border-color: var(--color-accent); }
+.filter-tag.active { color: var(--color-accent); background: rgba(255,107,107,0.1); border-color: var(--color-accent); } /* 选中态：accent 色文字 + 半透明背景 + 边框 */
 
 .filter-price { display: flex; align-items: center; gap: var(--spacing-sm); }
 .filter-label { font-size: 0.8rem; color: var(--color-text-dim); }

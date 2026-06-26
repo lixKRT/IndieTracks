@@ -76,7 +76,7 @@
 
     <EmptyState v-else message="购物车是空的" />
 
-    <!-- 结算确认弹窗 -->
+    <!-- 结算确认弹窗：Teleport 到 body 避免父容器 overflow/transform 影响定位 -->
     <Teleport to="body">
       <div v-if="showCheckoutModal" class="modal-overlay" @click.self="showCheckoutModal = false">
         <div class="modal-content">
@@ -119,13 +119,14 @@
 </template>
 
 <script setup>
+// CartView — 购物车页：商品列表（可勾选） + 结算面板 + 确认弹窗
 import { ref, computed, onMounted } from 'vue'
 import { getCart, removeFromCart, checkoutCart, getCartCount } from '../api'
 import { useNavigation } from '../composables/navigation.js'
 import LoadingSpinner from '../components/atoms/LoadingSpinner.vue'
 import EmptyState from '../components/atoms/EmptyState.vue'
 
-const { goToAlbum } = useNavigation()
+const { goToAlbum } = useNavigation() // composable 封装的路由跳转方法
 
 const loading = ref(true)
 const cartItems = ref([])
@@ -142,6 +143,7 @@ const totalPrice = computed(() =>
   selectedItems.value.reduce((sum, item) => sum + (item.price || 0), 0)
 )
 
+// selectAll checkbox 与 selectedIds 数组双向同步
 function toggleSelectAll() {
   if (selectAll.value) {
     selectedIds.value = cartItems.value.map(item => item.album_id)
@@ -167,7 +169,7 @@ async function handleRemove(item) {
     await removeFromCart(item.album_id)
     cartItems.value = cartItems.value.filter(i => i.album_id !== item.album_id)
     selectedIds.value = selectedIds.value.filter(id => id !== item.album_id)
-    // 更新 Navbar 角标
+    // 更新 Navbar 角标（跨组件通信）
     window.dispatchEvent(new CustomEvent('cart-updated'))
   } catch (e) {
     console.error('移除失败:', e)
@@ -183,7 +185,7 @@ async function confirmCheckout() {
   checkingOut.value = true
   try {
     await checkoutCart(selectedIds.value)
-    // 移除已购买的项目
+    // 结算成功后从本地列表移除已购买项，无需重新请求
     cartItems.value = cartItems.value.filter(item => !selectedIds.value.includes(item.album_id))
     selectedIds.value = []
     showCheckoutModal.value = false
@@ -334,7 +336,7 @@ onMounted(loadCart)
   width: 300px;
   flex-shrink: 0;
   position: sticky;
-  top: 100px;
+  top: 100px; /* 粘性定位，滚动时结算面板始终可见 */
 }
 
 .summary-card {

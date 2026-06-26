@@ -63,6 +63,7 @@
 </template>
 
 <script>
+// HomeView — 首页：Hero 统计 + 最新专辑网格 + 热门社团横滚
 import AlbumGrid from '../components/organisms/AlbumGrid.vue';
 import HeroSection from '../components/organisms/HeroSection.vue';
 import { fetchAlbums, fetchCircles, getCart, addToCart, removeFromCart } from '../api';
@@ -101,12 +102,13 @@ export default {
     }
   },
   setup() {
+    // Options API + Composition API 混用：setup 注入 store/composable，methods 处理业务逻辑
     const player = usePlayerStore();
     const favorite = useFavoriteStore();
     const userStore = useUserStore();
     const { goToAlbum, goToCircle, goToTag, goToCircleById } = useNavigation();
-    const { guard } = useAuthGuard();
-    const { addPreview } = usePreviewPlay();
+    const { guard } = useAuthGuard(); // 未登录时拦截操作并提示
+    const { addPreview } = usePreviewPlay(); // 封装试听播放逻辑
     return { player, favorite, userStore, goToAlbum, goToCircle, goToTag, goToCircleById, guard, addPreview };
   },
   async mounted() {
@@ -122,7 +124,7 @@ export default {
         this.page = 1;
 
         const circleResult = await fetchCircles();
-        this.featuredCircles = circleResult.data.slice(0, 4);
+        this.featuredCircles = circleResult.data.slice(0, 4); // 首页只展示 4 个热门社团
         this.circlesCount = circleResult.data.length;
 
         // 加载购物车状态
@@ -141,12 +143,13 @@ export default {
         this.loading = false;
       }
     },
+    // Hero 数字动画：requestAnimationFrame 驱动，easeOutCubic 缓动曲线
     animateCount(field, target, duration) {
       const start = performance.now();
       const step = (now) => {
         const elapsed = now - start;
         const progress = Math.min(elapsed / duration, 1);
-        const ease = 1 - Math.pow(1 - progress, 3);
+        const ease = 1 - Math.pow(1 - progress, 3); // easeOutCubic
         this[field] = Math.round(ease * target);
         if (progress < 1) requestAnimationFrame(step);
       };
@@ -184,7 +187,7 @@ export default {
           await addToCart(album.album_id);
           this.cartIds.push(album.album_id);
         }
-        // 更新 Navbar 角标
+        // 通过自定义事件通知 Navbar 刷新购物车角标（跨组件通信，无父子关系）
         window.dispatchEvent(new CustomEvent('cart-updated'));
       }, () => alert('请先登录'));
     },

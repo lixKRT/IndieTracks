@@ -157,6 +157,7 @@ export default {
     const followingUsers = ref([]);
     const isFollowed = ref(false);
 
+    // 当前登录用户是否在查看自己的主页（控制头像上传等权限）
     const isOwner = computed(() => {
       return userStore.isLoggedIn && userStore.user?.user_id === parseInt(route.params.id);
     });
@@ -167,6 +168,7 @@ export default {
       try {
         user.value = await fetchUser(id);
 
+        // 四个请求并行发出，单个失败不影响其余（settled 而非 all）
         const [favRes, purchRes, circRes, userRes] = await Promise.allSettled([
           getUserFavorites(id),
           getUserPurchases(),
@@ -178,7 +180,7 @@ export default {
         followingCircles.value = circRes.status === 'fulfilled' ? circRes.value : [];
         followingUsers.value = userRes.status === 'fulfilled' ? userRes.value : [];
 
-        // 加载当前用户的收藏状态到 store（用于按钮高亮）
+        // 加载当前登录用户的收藏状态到 store，用于页面内所有收藏按钮的高亮判断
         if (userStore.isLoggedIn) {
           await favorite.loadAll();
         }
@@ -228,7 +230,7 @@ export default {
       }
     }
 
-    // 修复：函数名不再与 API 导入冲突
+    // _followed 是前端附加的追踪字段，直接修改响应式对象属性触发 UI 更新
     async function handleUnfollowUser(u) {
       await apiUnfollowUser(u.user_id);
       u._followed = false;
@@ -262,7 +264,7 @@ export default {
     }
 
     onMounted(loadData);
-    watch(() => route.params.id, loadData);
+    watch(() => route.params.id, loadData); // 用户主页间跳转时重新加载数据
 
     return {
       user, loading, activeTab, followTab, favorites, purchases, followingCircles, followingUsers,
@@ -278,6 +280,7 @@ export default {
 .profile-header { display: flex; align-items: center; gap: 2rem; padding: 3rem 0 2rem; }
 .profile-avatar { width: 96px; height: 96px; flex-shrink: 0; position: relative; cursor: default; }
 .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+/* 头像上传遮罩层：仅 isOwner 时显示，hover 时渐显相机图标 */
 .avatar-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: var(--color-text-primary); font-size: 1.2rem; opacity: 0; transition: opacity 0.2s; cursor: pointer; }
 .profile-avatar:hover .avatar-overlay { opacity: 1; }
 .avatar-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--color-bg-secondary); color: var(--color-text-dim); font-size: 2.5rem; }

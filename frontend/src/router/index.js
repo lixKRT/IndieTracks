@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useUserStore } from '../stores/user.js';
 
+// 所有路由均使用懒加载（`() => import(...)`），按需拆分 chunk
 const routes = [
   {
     path: '/',
@@ -37,7 +38,7 @@ const routes = [
     name: 'Cart',
     component: () => import('../views/CartView.vue')
   },
-  // 管理后台路由
+  // 管理后台路由 — 父级 meta 要求登录 + pro/staff 角色
   {
     path: '/admin',
     component: () => import('../layouts/AdminLayout.vue'),
@@ -67,6 +68,7 @@ const routes = [
         path: 'circles',
         name: 'AdminCircleList',
         component: () => import('../views/admin/CircleList.vue'),
+        // 覆盖父级角色：社团管理仅 staff 可访问
         meta: { roles: ['staff'] }
       },
       {
@@ -93,6 +95,7 @@ const routes = [
       }
     ]
   },
+  // 404 兜底路由，必须放最后
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
@@ -103,6 +106,7 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  // savedPosition 存在时说明是浏览器前进/后退，恢复之前的滚动位置
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) return savedPosition
     if (to.hash) return { el: to.hash, behavior: 'smooth' }
@@ -123,6 +127,7 @@ router.beforeEach((to, from, next) => {
     }
 
     // 检查角色权限 - 使用最具体的路由（最后一个有 roles 的）
+    // matched 按父→子排列，最后一个即最内层子路由的 meta.roles
     const roleRecords = to.matched.filter(record => record.meta.roles);
     if (roleRecords.length > 0) {
       const requiredRoles = roleRecords[roleRecords.length - 1].meta.roles;

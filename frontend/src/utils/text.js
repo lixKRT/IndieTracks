@@ -40,7 +40,7 @@ const BOILERPLATE = [
  */
 export function cleanText(text) {
   if (!text) return ''
-  // 移除损坏的 Unicode 字符
+  // 移除孤立的低代理项（lone surrogates），爬虫抓取时可能产生这类非法 UTF-16
   let cleaned = text.replace(/[\udc00-\udfff]/g, '')
   // 按行过滤
   const lines = cleaned.split('\n').filter(line => {

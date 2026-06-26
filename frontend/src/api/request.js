@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+// baseURL 使用相对路径，开发环境由 vite proxy 转发到 Spring Boot 后端
 export const api = axios.create({
   baseURL: '/api',
   timeout: 10000,
@@ -17,12 +18,16 @@ api.interceptors.response.use(
   }
 );
 
+// 注意：所有函数的 `const { data }` 解构了 axios 的 response，
+// 返回的是后端 JSON body（后端统一返回 snake_case 字段）
+
 // ===== 专辑 =====
 export async function fetchAlbums(params = {}) {
   const { data } = await api.get('/albums', { params });
   return data;
 }
 
+// 参数使用 snake_case（album_id）以匹配后端 URL 路径参数
 export async function fetchAlbum(album_id) {
   const { data } = await api.get(`/albums/${album_id}`);
   return data;
@@ -140,6 +145,7 @@ export async function checkInCart(albumId) {
   return data;
 }
 
+// 请求体字段使用 snake_case（album_ids）以匹配后端 DTO
 export async function checkoutCart(albumIds) {
   const { data } = await api.post('/cart/checkout', { album_ids: albumIds });
   return data;
@@ -214,6 +220,7 @@ export async function fetchMe() {
   return data;
 }
 
+// FormData 上传头像，需显式设置 multipart/form-data
 export async function uploadAvatar(file) {
   const formData = new FormData();
   formData.append('file', file);

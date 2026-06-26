@@ -3,7 +3,7 @@
   <div class="comment-section">
     <h3 class="comment-title">评论 ({{ total }})</h3>
 
-    <!-- 发表评论（移到标题下方） -->
+    <!-- 已登录显示评论框，未登录提示登录 -->
     <div class="comment-form" v-if="isLoggedIn">
       <textarea v-model="newComment" placeholder="写下你的想法..." rows="2" class="comment-textarea"></textarea>
       <button class="comment-submit" @click="submitComment" :disabled="!newComment.trim()">发表评论</button>
@@ -13,6 +13,7 @@
     <div v-if="comments.length === 0" class="comment-empty">暂无评论</div>
 
     <div class="comment-list" ref="commentList" @scroll="handleScroll">
+      <!-- 只有评论作者才能编辑/删除 -->
       <CommentItem
         v-for="c in comments"
         :key="c.comment_id"
@@ -55,10 +56,10 @@ export default {
     handleDelete(commentId) {
       this.$emit('delete-comment', commentId);
     },
+    // 无限滚动：滚动到距底部 20px 时触发加载更多
     handleScroll() {
       const el = this.$refs.commentList;
       if (!el || this.loading) return;
-      // 滚动到底部附近时触发加载
       if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
         if (this.comments.length < this.total) {
           this.$emit('load-more');
@@ -89,9 +90,9 @@ export default {
 .login-hint { color: var(--color-text-dim); font-size: 0.8rem; margin-bottom: var(--spacing-sm); }
 
 .comment-list {
-  height: 400px;
+  height: 400px; /* 固定高度以支持滚动加载 */
   overflow-y: auto;
-  scrollbar-width: thin;
+  scrollbar-width: thin; /* Firefox 细滚动条 */
   scrollbar-color: var(--color-border) transparent;
 }
 .comment-list::-webkit-scrollbar { width: 4px; }

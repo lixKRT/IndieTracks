@@ -91,11 +91,12 @@ export default {
     const userStore = useUserStore();
     const favorite = useFavoriteStore();
     const { goToAlbum, goToCircle, goToTag, goToUser } = useNavigation();
-    const { guard } = useAuthGuard();
+    const { guard } = useAuthGuard(); // 未登录操作时弹窗提示
     const { addPreview } = usePreviewPlay();
     return { userStore, favorite, goToAlbum, goToCircle, goToTag, goToUser, guard, addPreview };
   },
   computed: {
+    // 专辑 API 不返回所属社团 logo，这里从 circle 对象注入
     enhancedAlbums() {
       if (!this.circle) return [];
       return this.circle.albums.map(album => ({
@@ -153,6 +154,7 @@ export default {
 }
 
 .detail-hero {
+  /* 暗色渐变 Hero 区域，与页面主背景形成层次 */
   background: linear-gradient(135deg, rgba(20,20,20,0.9) 0%, rgba(10,10,10,0.95) 100%);
   border: 1px solid var(--color-border);
   margin-bottom: var(--spacing-xl);

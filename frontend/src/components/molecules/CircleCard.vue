@@ -1,4 +1,4 @@
-<!-- 社团卡片（分子）— 带预览专辑堆叠 -->
+<!-- CircleCard — 社团卡片分子组件，上半部分社团信息，下半部分预览专辑扇形堆叠 -->
 <template>
   <div class="circle-card">
     <div class="circle-info" @click="$emit('circle-click', circle)">
@@ -29,6 +29,7 @@
       </div>
     </div>
 
+    <!-- 预览专辑扇形堆叠区，数据来自 circle.preview_albums（爬虫预处理） -->
     <div class="albums-stack" v-if="circle.preview_albums && circle.preview_albums.length">
       <div
         v-for="(album, idx) in circle.preview_albums"
@@ -47,6 +48,7 @@
           </div>
         </div>
       </div>
+      <!-- 超过 4 张专辑时显示"更多"入口 -->
       <div
         v-if="circle.album_count > 4"
         class="stack-more"
@@ -69,6 +71,7 @@ export default {
   },
   emits: ['circle-click', 'tag-click', 'toggle-follow', 'album-click'],
   methods: {
+    // 生成扇形堆叠样式：以中心为轴旋转，index 越大 z-index 越低
     getStackStyle(index, total) {
       const angle = (index - (total - 1) / 2) * 2.5;
       const offsetX = (index - (total - 1) / 2) * 4;
@@ -237,6 +240,7 @@ export default {
   overflow: hidden;
 }
 
+/* !important 覆盖 getStackStyle 生成的 inline rotate/translate */
 .stack-item:hover {
   transform: translateY(-6px) rotate(0deg) !important;
   z-index: 10 !important;

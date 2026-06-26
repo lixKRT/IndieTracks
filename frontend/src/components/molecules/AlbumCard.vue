@@ -1,18 +1,21 @@
-<!-- 专辑卡片（分子）— 横向布局，纯展示组件，通过 props/emits 通信 -->
+<!-- AlbumCard — 专辑卡片分子组件，横向布局（封面60% + 信息40%），纯展示，通过 props/emits 通信 -->
 <template>
   <div class="album-card">
     <div class="card-top">
       <div class="card-cover" @click="$emit('album-click', album)">
         <img v-if="album.cover_url" :src="album.cover_url" :alt="album.title" class="cover-img">
         <div v-else class="cover-placeholder"><i class="fas fa-compact-disc"></i></div>
+        <!-- price === 0 表示免费专辑，dizzylab 数据约定 -->
         <span v-if="album.price === 0" class="free-badge">免费</span>
       </div>
 
+      <!-- 右侧社团信息区，移动端隐藏 -->
       <div class="card-info">
         <div class="info-circle" @click="$emit('circle-click', album)">
           <img :src="album.circle_logo_url" :alt="album.circle_name" class="circle-logo">
           <span class="circle-name">{{ album.circle_name }}</span>
         </div>
+        <!-- info_title: 专辑简介/副标题，由爬虫从 dizzylab 提取 -->
         <p class="info-desc" :title="album.info_title">{{ album.info_title }}</p>
       </div>
     </div>
@@ -21,10 +24,12 @@
       <h3 class="album-title" @click="$emit('album-click', album)">{{ album.title }}</h3>
       <div class="bottom-meta-row">
         <div class="album-tags">
+          <!-- 最多展示 3 个标签，超出显示 +N -->
           <span v-for="tag in album.tags.slice(0, 3)" :key="tag" class="tag" @click.stop="$emit('tag-click', tag)">#{{ tag }}</span>
           <span v-if="album.tags.length > 3" class="tag tag-more">+{{ album.tags.length - 3 }}</span>
         </div>
         <div class="action-buttons">
+          <!-- @click.stop 防止冒泡触发外层 album-click -->
           <button
             class="favorite-btn"
             :class="{ 'is-favorited': isFavorited }"
@@ -75,6 +80,7 @@ export default {
 
 .card-top { display: flex; }
 
+/* 封面占卡片左侧 60%，1:1 正方形比例 */
 .card-cover {
   position: relative;
   width: 60%;
@@ -153,6 +159,7 @@ export default {
 
 .info-circle:hover .circle-name { color: var(--color-accent); }
 
+/* 多行文本截断，最多 3 行 */
 .info-desc {
   font-size: 0.75rem;
   color: var(--color-text-dim);
@@ -282,6 +289,7 @@ export default {
   color: var(--color-text-primary);
 }
 
+/* 移动端：纵向布局，隐藏社团信息区 */
 @media (max-width: 639px) {
   .card-top { flex-direction: column; }
   .card-cover { width: 100%; }

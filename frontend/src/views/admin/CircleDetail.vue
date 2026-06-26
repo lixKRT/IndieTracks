@@ -1,3 +1,4 @@
+<!-- AdminCircleDetail — 社团详情/编辑页，含信息修改与成员管理 -->
 <template>
   <div class="circle-detail-page">
     <div class="page-header">
@@ -82,8 +83,10 @@ export default {
       this.loading = true;
       try {
         const id = this.$route.params.id;
+        // credentials: 'include' 确保携带 HttpOnly Cookie 进行身份认证
         const resp = await fetch(`/api/admin/circles/${id}`, { credentials: 'include' });
         const data = await resp.json();
+        // 手动映射字段并设默认值，避免 v-model 绑定 undefined 导致受控/非受控切换
         this.circle = {
           circle_id: data.circle_id,
           name: data.name || '',

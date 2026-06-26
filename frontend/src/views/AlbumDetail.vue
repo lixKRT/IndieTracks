@@ -52,6 +52,7 @@
                   <span class="price-tag free" v-else>免费</span>
                 </div>
 
+                <!-- cleanText: 去除后端返回的 HTML 标签，防止 XSS -->
                 <div class="desc" v-if="cleanText(album.info_title) || cleanText(album.info_content)">
                   <p class="desc-title" v-if="cleanText(album.info_title)">{{ cleanText(album.info_title) }}</p>
                   <p class="desc-content" v-if="cleanText(album.info_content)">{{ cleanText(album.info_content) }}</p>
@@ -167,8 +168,9 @@
 </template>
 
 <script setup>
+// AlbumDetail — 专辑详情页：封面/社团卡片/曲目试听/购买/评论/推荐
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute } from 'vue-router' // useRoute 用于读取路由参数，不触发响应式导航
 import { fetchAlbum, fetchRecommendations, fetchCircle, fetchComments, addComment, updateComment, deleteComment, checkCircleFollow, followCircle, unfollowCircle, purchaseAlbum, checkPurchased, addToCart, removeFromCart, checkInCart } from '../api'
 import { usePlayerStore } from '../stores/player.js'
 import { useFavoriteStore } from '../stores/favorite.js'
@@ -186,7 +188,7 @@ const player = usePlayerStore()
 const favorite = useFavoriteStore()
 const userStore = useUserStore()
 const { goToAlbum, goToCircle, goToTag } = useNavigation()
-const { guard: guardAsync } = useAuthGuard()
+const { guard: guardAsync } = useAuthGuard() // 重命名避免与变量名冲突
 
 const album = ref(null)
 const loading = ref(true)
@@ -230,7 +232,7 @@ async function loadAlbum() {
       } catch { /* ignore */ }
     }
 
-    // 初始化评论（详情页返回前 5 条）
+    // 详情页 API 已返回前 5 条评论，仅在恰好 5 条时才额外请求 total（分页需要）
     comments.value = album.value.comments || []
     commentsTotal.value = comments.value.length
     commentsPage.value = 1
@@ -331,7 +333,7 @@ async function handleDeleteComment(commentId) {
   }
 }
 
-// 曲目点击播放（TrackList emit 的 preview 事件）
+// 曲目点击播放：work_files 中 file_type='preview' 为试听文件，'full' 为完整版
 function handleTrackClick(tracks, startIndex) {
   const previewTracks = tracks.filter(t => t.file_type === 'preview')
   if (previewTracks.length === 0) return
@@ -342,6 +344,7 @@ function handleTrackClick(tracks, startIndex) {
   if (previewIndex >= 0) {
     player.playAlbumTracks(tracks, previewIndex)
   } else {
+    // 点击的是完整版文件，自动跳到其后最近的试听文件
     const nextPreviewIdx = previewTracks.findIndex(t => {
       const origIdx = tracks.findIndex(tt => tt.file_id === t.file_id)
       return origIdx > startIndex
@@ -394,7 +397,7 @@ async function handleToggleCart() {
       await addToCart(album.value.album_id)
       isInCart.value = true
     }
-    // 更新 Navbar 角标
+    // 更新 Navbar 角标（跨组件通信）
     window.dispatchEvent(new CustomEvent('cart-updated'))
   } catch (e) {
     console.error('操作失败:', e)

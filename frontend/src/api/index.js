@@ -1,3 +1,4 @@
+// 统一 re-export，外部只需 `import { ... } from '@/api'` 即可
 export {
   fetchAlbums, fetchAlbum, fetchRecommendations,
   fetchCircles, fetchCircle,

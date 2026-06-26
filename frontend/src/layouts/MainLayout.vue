@@ -32,6 +32,7 @@
             <input id="username" type="text" v-model="formData.username" required>
           </div>
 
+          <!-- 登录时此字段同时接受用户名或邮箱 -->
           <div class="form-group">
             <label for="email">{{ showLoginModal ? '用户名或邮箱' : '邮箱' }}</label>
             <input id="email" :type="showLoginModal ? 'text' : 'email'" v-model="formData.email" required>
@@ -71,6 +72,7 @@ import FooterSection from '../components/organisms/FooterSection.vue';
 import PlayerBar from '../components/organisms/PlayerBar.vue';
 import { useUserStore } from '../stores/user.js';
 
+// MainLayout — 全局布局壳：顶栏 + 主内容 + 底部播放栏 + 页脚 + 登录/注册弹窗
 export default {
   name: 'MainLayout',
   components: { Navbar, FooterSection, PlayerBar },
@@ -88,6 +90,7 @@ export default {
     return { userStore };
   },
   mounted() {
+    // 从 cookie/token 恢复登录状态，刷新页面后自动保持登录
     this.userStore.init();
   },
   methods: {
@@ -120,6 +123,7 @@ export default {
             password: this.formData.password
           });
         } else {
+          // 后端 account 字段接受用户名或邮箱；remember_me 为 snake_case，与后端一致
           await this.userStore.doLogin({
             account: this.formData.email,
             password: this.formData.password,
@@ -128,6 +132,7 @@ export default {
         }
         this.closeModals();
       } catch (e) {
+        // Axios 错误结构：e.response.data.error 由后端统一返回
         this.errorMsg = e.response?.data?.error || '操作失败';
       } finally {
         this.submitting = false;
@@ -140,8 +145,8 @@ export default {
 <style scoped>
 .layout-main {
   min-height: 100vh;
-  padding-bottom: 80px;
-  overflow-anchor: none;
+  padding-bottom: 80px; /* 底部播放栏(PlayerBar)固定 80px，防止内容被遮挡 */
+  overflow-anchor: none; /* 禁用浏览器自动滚动锚定，避免动态内容导致页面跳动 */
 }
 
 .modal-overlay {

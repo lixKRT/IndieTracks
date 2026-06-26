@@ -1,7 +1,8 @@
-<!-- 曲目列表（有机体） -->
+<!-- TrackList — 曲目列表，展示当前专辑的所有曲目并支持试听 -->
 <template>
   <div class="tracklist">
     <h3 class="tracklist-title">曲目列表 ({{ tracks.length }})</h3>
+    <!-- TrackRow emit (track, index)，此处忽略单曲引用，传整个 tracks 数组以支持播放列表上下文 -->
     <TrackRow
       v-for="(track, index) in tracks"
       :key="track.file_id"
@@ -27,6 +28,7 @@ export default {
   setup() {
     const player = usePlayerStore();
     return {
+      // 从 player store 派生响应式状态，用于高亮当前播放曲目
       currentTrackId: computed(() => player.current_track?.file_id ?? null),
       isPlaying: computed(() => player.is_playing)
     };

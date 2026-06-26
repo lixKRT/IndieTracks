@@ -1,3 +1,4 @@
+// 收藏 Store — 管理用户收藏的专辑 ID 列表（Options API 风格）
 import { defineStore } from 'pinia';
 import { addFavorite, removeFavorite, checkFavorite, getFavorites } from '../api';
 
@@ -11,6 +12,7 @@ export const useFavoriteStore = defineStore('favorite', {
   },
 
   actions: {
+    // 乐观更新：先修改本地状态，再同步后端
     async toggleFavorite(albumId) {
       const idx = this.favoriteAlbumIds.indexOf(albumId);
       if (idx >= 0) {
@@ -22,6 +24,7 @@ export const useFavoriteStore = defineStore('favorite', {
       }
     },
 
+    // 单个专辑收藏状态检查，同步本地缓存
     async check(albumId) {
       try {
         const data = await checkFavorite(albumId);
@@ -35,6 +38,7 @@ export const useFavoriteStore = defineStore('favorite', {
       } catch { return false; }
     },
 
+    // 加载全部收藏列表，后端返回 snake_case 字段
     async loadAll() {
       try {
         const data = await getFavorites();

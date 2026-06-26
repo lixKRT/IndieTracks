@@ -1,3 +1,4 @@
+<!-- AdminCommentList — 管理后台评论列表，支持分页与删除 -->
 <template>
   <div class="comment-list-page">
     <h1 class="page-title">评论管理</h1>
@@ -93,6 +94,7 @@ export default {
           page: this.currentPage,
           page_size: this.pageSize
         });
+        // 兼容 { data, total } 和直接数组两种响应格式
         this.comments = result.data || result || [];
         this.totalComments = result.total || this.comments.length;
       } catch (e) {

@@ -34,5 +34,6 @@ export function useAuthGuard() {
     }
   }
 
+  // isLoggedIn 为创建时的布尔快照，非响应式引用
   return { guard, isLoggedIn: userStore.isLoggedIn }
 }

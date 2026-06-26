@@ -1,3 +1,4 @@
+<!-- AdminTagList — 管理后台标签列表，支持搜索、新增弹窗与删除 -->
 <template>
   <div class="tag-list-page">
     <div class="page-header">
@@ -87,10 +88,12 @@ export default {
     await this.loadTags();
   },
   methods: {
+    // 标签无分页，一次加载全部
     async loadTags() {
       this.loading = true;
       try {
         const result = await getAdminTags({ search: this.searchQuery || undefined });
+        // 兼容 { data } 和直接数组两种响应格式
         this.tags = result.data || result || [];
       } catch (e) {
         console.error('加载标签失败:', e);

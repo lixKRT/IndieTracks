@@ -1,3 +1,4 @@
+<!-- AdminAlbumList — 管理后台专辑列表，支持搜索与分页 -->
 <template>
   <div class="album-list-page">
     <div class="page-header">
@@ -117,6 +118,7 @@ export default {
     async loadAlbums() {
       this.loading = true;
       try {
+        // 后端 API 参数使用 snake_case
         const result = await getAdminAlbums({
           page: this.currentPage,
           page_size: this.pageSize,
@@ -142,7 +144,7 @@ export default {
     },
     formatDate(date) {
       if (!date) return '-';
-      return new Date(date).toLocaleDateString('zh-CN');
+      return new Date(date).toLocaleDateString('zh-CN'); // 中文日期格式：YYYY/M/D
     }
   }
 };

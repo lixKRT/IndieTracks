@@ -10,6 +10,6 @@ import './styles/utilities.css';
 
 const app = createApp(App);
 const pinia = createPinia();
-app.use(pinia);
+app.use(pinia);   // Pinia 需在 router 之前注册，路由守卫依赖 store
 app.use(router);
 app.mount('#app');

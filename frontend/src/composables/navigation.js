@@ -10,11 +10,13 @@ export function useNavigation() {
     router.push(`/album/${album.album_id}`)
   }
 
+  // 兼容专辑对象和社团对象（都有 circle_id）
   function goToCircle(albumOrCircle) {
     const id = albumOrCircle.circle_id
     if (id) router.push(`/label/${id}`)
   }
 
+  // 兼容字符串和标签对象两种入参
   function goToTag(tag) {
     const name = typeof tag === 'string' ? tag : tag.name
     router.push({ path: '/tag', query: { tag: name } })

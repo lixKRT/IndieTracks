@@ -1,6 +1,7 @@
-<!-- 评论条目（分子） -->
+<!-- CommentItem — 评论条目分子组件，支持编辑/删除操作 -->
 <template>
   <div class="comment-item">
+    <!-- user_id 存在表示注册用户，头像和用户名可点击跳转个人页；否则为游客，不可跳转 -->
     <router-link v-if="comment.user_id" :to="`/user/${comment.user_id}`" class="comment-avatar-link">
       <img :src="comment.avatar_url" :alt="comment.username" class="comment-avatar">
     </router-link>
@@ -9,6 +10,7 @@
       <div class="comment-header">
         <router-link v-if="comment.user_id" :to="`/user/${comment.user_id}`" class="comment-username">{{ comment.username }}</router-link>
         <span v-else class="comment-username">{{ comment.username }}</span>
+        <!-- canEdit 为 true 时显示编辑/删除按钮（当前用户是评论作者） -->
         <div class="comment-actions" v-if="canEdit">
           <button class="action-btn" @click="$emit('edit', comment)" title="编辑"><i class="fas fa-edit"></i></button>
           <button class="action-btn delete" @click="$emit('delete', comment.comment_id)" title="删除"><i class="fas fa-trash"></i></button>
@@ -33,6 +35,7 @@ export default {
 <style scoped>
 .comment-item { display: flex; gap: var(--spacing-md); padding: var(--spacing-md) 0; border-bottom: 1px solid var(--color-border); }
 .comment-avatar-link { flex-shrink: 0; }
+/* 头像使用方形（border-radius: 0），参考 dizzylab 风格 */
 .comment-avatar { width: 40px; height: 40px; border-radius: 0; object-fit: cover; flex-shrink: 0; background: var(--color-bg-tertiary); display: block; }
 .comment-body { flex: 1; min-width: 0; }
 .comment-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--spacing-xs); }
@@ -41,6 +44,7 @@ export default {
 .comment-actions { display: flex; gap: 0.3rem; }
 .action-btn { background: none; border: none; color: var(--color-text-dim); font-size: 0.75rem; cursor: pointer; padding: 0.2rem; transition: color 0.2s; }
 .action-btn:hover { color: var(--color-accent); }
+/* 删除按钮悬停使用红色警示，区别于主题 accent 色 */
 .action-btn.delete:hover { color: #ff4444; }
 .comment-content { font-size: 0.85rem; color: var(--color-text-muted); line-height: 1.6; }
 </style>

@@ -1,6 +1,7 @@
 <!-- 底部播放条（有机体） -->
 <template>
   <aside v-if="store.playlist_length > 0" class="player-bar" :class="{ expanded: store.is_expanded }">
+    <!-- preload="auto" 提前缓冲音频，减少播放延迟 -->
     <audio ref="audio" preload="auto"></audio>
 
     <!-- 收起态 -->
@@ -33,6 +34,7 @@
         <button class="player-clear-btn" @click="store.clearPlaylist()">清空列表</button>
       </div>
       <div class="player-playlist">
+        <!-- 支持拖拽排序：dragover.prevent 是 HTML5 拖放的必要条件 -->
         <div
           v-for="(track, index) in store.playlist"
           :key="'pl-' + index"
@@ -64,9 +66,9 @@ export default {
     return {
       currentTime: 0,
       duration: 0,
-      dragFrom: -1,
-      seeking: false,
-      listenersAttached: false
+      dragFrom: -1, // 拖拽排序的起始索引，-1 表示无拖拽
+      seeking: false, // 用户拖动进度条时为 true，阻止 timeupdate 覆盖用户位置
+      listenersAttached: false // 防止重复绑定 audio 事件监听器
     };
   },
   setup() {
@@ -124,6 +126,7 @@ export default {
         console.warn('Audio load error, trying next track');
       });
     },
+    // 从 store 获取当前曲目，preview_url 为后端/爬虫提供的试听音频地址
     loadTrack() {
       const audio = this.$refs.audio;
       const track = this.store.current_track;
@@ -140,6 +143,7 @@ export default {
       this.currentTime = 0;
       this.duration = 0;
     },
+    // 点击进度条跳转：根据鼠标位置计算百分比，seeking 锁防止 timeupdate 覆盖
     seekProgress(e) {
       const rect = e.currentTarget.querySelector('.player-progress-track');
       if (!rect || !this.duration) return;
@@ -180,7 +184,7 @@ export default {
   background: var(--color-bg-secondary);
   border-top: 1px solid var(--color-border);
   z-index: 200;
-  will-change: transform;
+  will-change: transform; /* GPU 加速提示，优化 fixed 定位元素的重绘性能 */
 }
 
 audio { display: none; }
@@ -266,9 +270,10 @@ audio { display: none; }
 /* ---- 展开态 ---- */
 .player-bar-expanded {
   max-height: 320px; overflow-y: auto; border-top: 1px solid var(--color-border);
-  scrollbar-width: thin;
+  scrollbar-width: thin; /* Firefox 细滚动条 */
   scrollbar-color: var(--color-border) transparent;
 }
+/* Webkit 浏览器自定义滚动条样式 */
 .player-bar-expanded::-webkit-scrollbar { width: 4px; }
 .player-bar-expanded::-webkit-scrollbar-track { background: transparent; }
 .player-bar-expanded::-webkit-scrollbar-thumb { background: var(--color-border); }
@@ -281,7 +286,7 @@ audio { display: none; }
   transition: background var(--transition-fast);
 }
 .playlist-row:hover { background: rgba(255, 255, 255, 0.03); }
-.playlist-row.active { background: rgba(255, 107, 107, 0.1); border-left: 3px solid var(--color-accent); }
+.playlist-row.active { background: rgba(255, 107, 107, 0.1); border-left: 3px solid var(--color-accent); } /* 当前播放曲目高亮，accent 色半透明背景 + 左侧指示条 */
 
 .playlist-drag-handle {
   font-size: 0.7rem; color: var(--color-text-dim); cursor: grab; flex-shrink: 0;

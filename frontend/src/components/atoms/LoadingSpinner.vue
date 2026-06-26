@@ -1,4 +1,5 @@
-<!-- 加载中 spinner（原子） -->
+<!-- LoadingSpinner — 加载中占位原子组件 -->
+<!-- 样式定义在全局 utilities.css，无 scoped 样式 -->
 <template>
   <div class="loading-container">
     <div class="loading-spinner"></div>

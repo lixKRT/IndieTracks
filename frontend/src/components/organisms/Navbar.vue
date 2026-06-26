@@ -1,4 +1,4 @@
-<!-- 导航栏 -->
+<!-- Navbar — 顶部导航栏，含搜索、购物车、用户菜单，sticky 定位 -->
 <template>
   <header class="navbar-header">
     <div class="container-wide">
@@ -13,6 +13,7 @@
 
         <div class="nav-menu" :class="{ open: mobileOpen }">
           <div class="nav-links">
+            <!-- exact-active-class 避免 "/" 匹配所有路由 -->
             <router-link to="/" exact-active-class="active" @click="mobileOpen = false">首页</router-link>
             <router-link to="/tag" @click="mobileOpen = false">标签</router-link>
             <router-link to="/labels" @click="mobileOpen = false">社团</router-link>
@@ -37,6 +38,7 @@
             <div v-if="showDropdown" class="dropdown">
               <router-link :to="`/user/${userStore.user?.user_id}`" class="dropdown-item" @click="showDropdown = false">个人主页</router-link>
               <router-link to="/cart" class="dropdown-item" @click="showDropdown = false">购物车</router-link>
+              <!-- 仅 pro/staff 角色显示管理后台入口 -->
               <router-link
                 v-if="userStore.user?.user_role === 'pro' || userStore.user?.user_role === 'staff'"
                 to="/admin"
@@ -68,6 +70,7 @@ export default {
   data() {
     return { searchQuery: '', mobileOpen: false, showDropdown: false, cartCount: 0 };
   },
+  // 混合使用 Composition API (setup) 与 Options API (data/methods)
   setup() {
     return { userStore: useUserStore() };
   },
@@ -83,6 +86,7 @@ export default {
       }
     }
   },
+  // 监听自定义 window 事件，跨组件同步购物车数量（如添加商品后触发）
   mounted() {
     window.addEventListener('cart-updated', this.loadCartCount);
   },
@@ -116,6 +120,7 @@ export default {
 <style scoped>
 .navbar-header {
   background-color: rgba(10, 10, 10, 0.95);
+  /* 磨砂玻璃效果，半透明背景 + 模糊 */
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
@@ -147,7 +152,7 @@ export default {
 .auth-buttons { display: flex; gap: 0; flex-shrink: 0; }
 .btn { padding: var(--spacing-sm) 1.2rem; cursor: pointer; font-weight: 500; transition: all var(--transition-normal); border: none; font-size: 0.9rem; color: var(--color-text-primary); }
 .btn-login { background: var(--color-bg-secondary); border-right: 1px solid var(--color-border-light); }
-.btn-register { background: #4CAF50; }
+.btn-register { background: #4CAF50; } /* Material Design 绿色，注册按钮强调色 */
 
 /* 用户菜单 */
 .user-menu { position: relative; }
@@ -187,7 +192,7 @@ export default {
   padding: 0 4px;
 }
 
-.dropdown { position: absolute; top: 100%; right: 0; background: var(--color-bg-secondary); border: 1px solid var(--color-border); min-width: 120px; z-index: 10; }
+.dropdown { position: absolute; top: 100%; right: 0; background: var(--color-bg-secondary); border: 1px solid var(--color-border); min-width: 120px; z-index: 10; } /* z-index: 10 确保下拉菜单在 navbar 内层叠正确 */
 .dropdown-item { display: block; width: 100%; padding: 0.5rem 1rem; background: none; border: none; color: var(--color-text-primary); font-size: 0.85rem; text-align: left; cursor: pointer; text-decoration: none; transition: background 0.2s; }
 .dropdown-item:hover { background: rgba(255,255,255,0.05); color: var(--color-accent); }
 .admin-link { border-top: 1px solid var(--color-border); color: var(--color-accent); }
@@ -202,6 +207,6 @@ export default {
   .auth-buttons { flex-direction: column; }
   .btn { text-align: center; padding: var(--spacing-sm); }
   .user-menu { width: 100%; }
-  .dropdown { position: static; width: 100%; }
+  .dropdown { position: static; width: 100%; } /* 移动端下拉菜单改为文档流内排列 */
 }
 </style>

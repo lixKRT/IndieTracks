@@ -6,6 +6,7 @@
     <EmptyState v-else-if="albums.length === 0" message="暂无专辑" />
 
     <div class="album-grid">
+      <!-- favoritedIds/cartIds 由父组件传入，用于标记已收藏/已加购状态 -->
       <AlbumCard
         v-for="album in albums"
         :key="album.album_id"
@@ -56,11 +57,13 @@ export default {
 
 .album-grid {
   display: grid;
+  /* 响应式列数：移动端 2 列，与媒体查询保持一致 */
   grid-template-columns: repeat(2, 1fr);
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-md);
 }
 
+/* 各断点均保持 2 列布局，有意为之 */
 @media (min-width: 640px) {
   .album-grid {
     grid-template-columns: repeat(2, 1fr);

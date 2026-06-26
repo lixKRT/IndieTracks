@@ -1,3 +1,4 @@
+<!-- AdminAlbumForm — 专辑新增/编辑共用表单，编辑模式下可管理标签和曲目 -->
 <template>
   <div class="album-form-page">
     <h1 class="page-title">{{ isEdit ? '编辑专辑' : '新增专辑' }}</h1>
@@ -188,8 +189,8 @@ export default {
     };
   },
   computed: {
-    isEdit() { return !!this.$route.params.id; },
-    isStaff() { return this.userStore.user?.user_role === 'staff'; },
+    isEdit() { return !!this.$route.params.id; }, // 路由有 :id 参数则为编辑模式
+    isStaff() { return this.userStore.user?.user_role === 'staff'; }, // staff 角色可更改所属社团
     isPlaying() { return this.playerStore.is_playing; }
   },
   async mounted() { await this.loadData(); },
@@ -197,11 +198,13 @@ export default {
     async loadData() {
       this.loading = true;
       try {
+        // 取全部社团用于下拉选择（page_size=1000 作为实际上限）
         const circleResult = await fetchCircles({ page_size: 1000 });
         this.circles = circleResult.data || [];
 
         if (this.isEdit) {
           const albumId = this.$route.params.id;
+          // 编辑模式直接 fetch 公开 API 获取专辑详情（含 tags/tracks）
           const resp = await fetch(`/api/albums/${albumId}`);
           const album = await resp.json();
           if (album) {
@@ -237,7 +240,7 @@ export default {
         alert('保存失败: ' + (e.response?.data?.error || e.message));
       } finally { this.submitting = false; }
     },
-    // 封面上传
+    // 封面上传：直传后端管理接口，返回 MinIO URL
     async uploadCover() {
       const file = this.$refs.coverFile.files[0];
       if (!file) return;
@@ -261,7 +264,7 @@ export default {
           body: JSON.stringify({ name })
         });
         if (resp.ok) {
-          this.albumTags.push({ tag_id: Date.now(), name });
+          this.albumTags.push({ tag_id: Date.now(), name }); // Date.now() 作为临时 ID，下次加载会由后端覆盖
           this.newTagName = '';
         }
       } catch (e) { console.error('添加标签失败:', e); }
@@ -279,6 +282,7 @@ export default {
       const current = this.playerStore.current_track;
       return current && current.file_id === track.file_id;
     },
+    // 仅 file_type === 'preview'（试听版）可播放；非试听曲目自动跳到下一个试听版
     playTrack(track, index) {
       const previewTracks = this.albumTracks.filter(t => t.file_type === 'preview');
       if (previewTracks.length === 0) return;
@@ -287,7 +291,7 @@ export default {
       if (clickedPreviewIndex >= 0) {
         this.playerStore.playAlbumTracks(this.albumTracks, clickedPreviewIndex);
       } else {
-        // 如果点击的不是 preview，找下一个 preview
+        // 点击的非试听曲目，向后查找最近的试听版
         const nextIdx = previewTracks.findIndex(t => {
           const origIdx = this.albumTracks.findIndex(tt => tt.file_id === t.file_id);
           return origIdx > index;
@@ -297,6 +301,7 @@ export default {
         }
       }
     },
+    // MinIO 对象通过 Nginx 代理访问，路径前缀 /minio/
     getTrackUrl(track) {
       return `/minio/indietracks/${track.object_key}`;
     },
@@ -319,6 +324,7 @@ export default {
         this.selectedFile = file;
       }
     },
+    // 使用 XHR 而非 fetch，因为需要 upload.onprogress 回调来显示上传进度
     async uploadTrack() {
       if (!this.selectedFile) return;
       this.uploading = true;
@@ -334,14 +340,14 @@ export default {
         xhr.onload = () => {
           if (xhr.status === 200) {
             const data = JSON.parse(xhr.responseText);
-            // 添加到曲目列表
+            // 构建本地临时曲目对象，file_id 用 Date.now() 占位
             const track = {
               file_id: Date.now(),
-              file_name: this.selectedFile.name.replace(/\.[^.]+$/, ''),
+              file_name: this.selectedFile.name.replace(/\.[^.]+$/, ''), // 去掉文件扩展名，仅显示曲目名
               object_key: data.object_key,
               preview_url: data.url,
               file_type: 'preview',
-              track_length: '--:--'
+              track_length: '--:--' // 时长占位，后端解析音频文件后回填实际值
             };
             this.albumTracks.push(track);
             this.showUploadModal = false;
@@ -400,6 +406,7 @@ export default {
 .track-item.active { background: rgba(255,107,107,0.06); border-left-color: var(--color-accent); }
 .track-item:hover { background: rgba(255,255,255,0.02); }
 .track-index { width: 28px; font-size: 0.8rem; color: var(--color-text-dim); text-align: center; display: flex; align-items: center; justify-content: center; }
+/* 播放中音波动画：三根竖条交替缩放 */
 .playing-indicator { display: flex; align-items: flex-end; gap: 2px; height: 14px; }
 .playing-indicator span { display: block; width: 3px; background: var(--color-accent); animation: playing-bar 0.8s ease-in-out infinite; }
 .playing-indicator span:nth-child(1) { height: 60%; animation-delay: 0s; }

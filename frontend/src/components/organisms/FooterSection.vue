@@ -57,6 +57,7 @@ export default {
 
 .footer-content {
   display: grid;
+  /* auto-fit + minmax：列数随视口宽度自适应，每列最小 200px */
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--spacing-xl);
   margin-bottom: var(--spacing-xl);

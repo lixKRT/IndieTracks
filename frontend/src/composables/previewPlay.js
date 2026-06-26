@@ -13,6 +13,7 @@ export function usePreviewPlay() {
    */
   async function addPreview(albumId) {
     const detail = await fetchAlbum(albumId)
+    // 第二个参数 0 = 从列表第一首开始播放
     player.addAlbumTracks(detail.tracks, 0)
   }
 
@@ -21,6 +22,7 @@ export function usePreviewPlay() {
    */
   async function playPreview(albumId) {
     const detail = await fetchAlbum(albumId)
+    // 第二个参数 0 = 从列表第一首开始播放
     player.playAlbumTracks(detail.tracks, 0)
   }
 

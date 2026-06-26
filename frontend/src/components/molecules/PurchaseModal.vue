@@ -1,5 +1,8 @@
+<!-- PurchaseModal — 确认购买弹窗，使用 Teleport 挂载到 body 避免 z-index 层叠问题 -->
 <template>
+  <!-- Teleport 挂载到 body，确保弹窗不被父级 overflow/transform 截断 -->
   <Teleport to="body">
+    <!-- .self 修饰符：只在点击遮罩层本身时关闭，点击弹窗内容不触发 -->
     <div v-if="visible" class="modal-overlay" @click.self="handleClose">
       <div class="modal-content">
         <div class="modal-header">
@@ -12,7 +15,9 @@
             <img :src="album.cover_url" :alt="album.title" class="album-cover" />
             <div class="album-details">
               <h4 class="album-title">{{ album.title }}</h4>
+              <!-- 后端可能未返回 circle_name，降级显示 -->
               <p class="album-circle">{{ album.circle_name || '未知社团' }}</p>
+              <!-- price 为 0 时显示免费标签 -->
               <div class="album-price">
                 <span v-if="album.price > 0" class="price-paid">¥ {{ album.price }}</span>
                 <span v-else class="price-free">免费</span>
@@ -22,6 +27,7 @@
         </div>
 
         <div class="modal-footer">
+          <!-- purchasing 期间禁用按钮，防止重复提交 -->
           <button class="btn-cancel" @click="handleClose" :disabled="purchasing">取消</button>
           <button class="btn-confirm" @click="handleConfirm" :disabled="purchasing">
             <span v-if="purchasing" class="loading">
@@ -154,6 +160,7 @@ function handleConfirm() {
 }
 
 .price-free {
+  /* 免费标签使用 Material Green 色值，不在主题变量中 */
   color: #4caf50;
 }
 

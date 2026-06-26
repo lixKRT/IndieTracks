@@ -55,6 +55,7 @@ export default {
     return { favorite, goToAlbum, goToCircle, guard, playPreview };
   },
   watch: {
+    // 筛选条件变化时重新加载；同时监听路由 query 以支持浏览器前进/后退
     filterTag() { this.loadAlbums(); },
     filterPrice() { this.loadAlbums(); },
     '$route.query'() { this.syncFromQuery(); }
@@ -64,6 +65,7 @@ export default {
     this.syncFromQuery();
   },
   methods: {
+    // 从 URL query 同步筛选状态，使筛选结果可通过 URL 分享
     syncFromQuery() {
       const q = this.$route.query;
       if (q.tag !== undefined) this.filterTag = q.tag || '';
@@ -88,7 +90,7 @@ export default {
     },
     onTagChange(tag) {
       this.filterTag = tag;
-      this.$router.replace({ query: { ...this.$route.query, tag: tag || undefined } });
+      this.$router.replace({ query: { ...this.$route.query, tag: tag || undefined } }); // replace 不产生历史记录
     },
     onPriceChange(price) {
       this.filterPrice = price;

@@ -1,6 +1,7 @@
 <!-- 曲目行（分子） -->
 <template>
   <div class="track-row" :class="{ active: is_current }" @click="$emit('preview', track, index)">
+    <!-- 当前播放曲目显示动画指示器，否则显示补零序号 -->
     <span class="track-index">
       <span v-if="is_current && playing" class="playing-indicator">
         <span></span><span></span><span></span>
@@ -26,6 +27,7 @@ export default {
   },
   emits: ['preview'],
   methods: {
+    // 序号补零：1 → "01"，10 → "10"
     pad(n) { return String(n).padStart(2, '0'); }
   }
 };
@@ -56,6 +58,7 @@ export default {
   justify-content: center;
 }
 
+/* 音乐均衡器动画：3 根条交替缩放 */
 .playing-indicator {
   display: flex;
   align-items: flex-end;
@@ -105,7 +108,7 @@ export default {
   justify-content: center;
   cursor: pointer;
   transition: all var(--transition-fast);
-  opacity: 0;
+  opacity: 0; /* 默认隐藏，hover 行时显示 */
   font-size: 0.7rem;
 }
 

@@ -11,6 +11,7 @@
       </div>
 
       <nav class="sidebar-nav">
+        <!-- exact-active-class: 仅完全匹配 /admin 时激活，避免子路由也高亮 -->
         <router-link to="/admin" class="nav-item" exact-active-class="active">
           <i class="fas fa-chart-line"></i>
           <span>数据透视</span>
@@ -59,6 +60,7 @@
 <script>
 import { useUserStore } from '../stores/user.js';
 
+// AdminLayout — 管理后台布局壳：侧边导航 + 内容区
 export default {
   name: 'AdminLayout',
   setup() {
@@ -66,6 +68,7 @@ export default {
     return { userStore };
   },
   computed: {
+    // staff 角色才能看到社团/用户/标签管理入口
     isStaff() {
       return this.userStore.user?.user_role === 'staff';
     }
@@ -218,6 +221,7 @@ export default {
   background: var(--color-text-dim);
 }
 
+/* 移动端：侧边栏收缩为仅图标模式 */
 @media (max-width: 768px) {
   .admin-sidebar {
     width: 60px;

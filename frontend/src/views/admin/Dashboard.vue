@@ -1,3 +1,4 @@
+<!-- AdminDashboard — 管理后台数据概览，含统计卡片与排行榜 -->
 <template>
   <div class="dashboard-page">
     <h1 class="page-title">数据透视</h1>
@@ -11,6 +12,7 @@
           <span class="stat-label">专辑总数</span>
         </div>
       </div>
+      <!-- staff 角色专属：社团和用户统计仅管理员可见 -->
       <div class="stat-card" v-if="isStaff">
         <div class="stat-icon"><i class="fas fa-users"></i></div>
         <div class="stat-info">
@@ -137,6 +139,7 @@ export default {
     };
   },
   computed: {
+    // staff = 管理员角色，控制部分统计卡片和活跃社团排行的可见性
     isStaff() {
       return this.userStore.user?.user_role === 'staff';
     }
@@ -164,7 +167,7 @@ export default {
       }
     },
     async loadTopCircles() {
-      if (!this.isStaff) return;
+      if (!this.isStaff) return; // 非管理员不加载社团排行
       this.loadingCircles = true;
       try {
         this.topCircles = await getTopCircles(this.circlePeriod, 50);
@@ -213,7 +216,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 107, 107, 0.1);
+  background: rgba(255, 107, 107, 0.1); /* 项目 accent 色 (#ff6b6b) 10% 透明度 */
   color: var(--color-accent);
   font-size: 1.2rem;
 }
@@ -320,7 +323,7 @@ export default {
 }
 
 .ranking-index.top3 {
-  color: var(--color-accent);
+  color: var(--color-accent); /* 前三名高亮使用项目主色 */
 }
 
 .ranking-cover {

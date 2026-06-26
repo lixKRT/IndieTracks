@@ -54,13 +54,14 @@ export default {
       page: 1,
       pageSize: 12,
       totalCircles: 0,
+      // 需整体替换 Set 才能触发 Vue 响应式更新（Options API 下 Set 变更不可追踪）
       followedIds: new Set()
     };
   },
   setup() {
     const userStore = useUserStore();
     const { goToAlbum, goToCircleById, goToTag } = useNavigation();
-    const { guard } = useAuthGuard();
+    const { guard } = useAuthGuard(); // 未登录时弹窗提示，不跳转
     return { userStore, goToAlbum, goToCircleById, goToTag, guard };
   },
   async mounted() {
@@ -109,7 +110,7 @@ export default {
           if (data.followed) this.followedIds.add(c.circle_id);
         } catch { /* ignore */ }
       }
-      this.followedIds = new Set(this.followedIds);
+      this.followedIds = new Set(this.followedIds); // 重新赋值触发响应式
     },
     async toggleFollow(circle) {
       await this.guard(async () => {
@@ -120,7 +121,7 @@ export default {
           await followCircle(circle.circle_id);
           this.followedIds.add(circle.circle_id);
         }
-        this.followedIds = new Set(this.followedIds);
+        this.followedIds = new Set(this.followedIds); // 重新赋值触发响应式
       }, () => alert('请先登录'));
     }
   }
@@ -132,6 +133,7 @@ export default {
   padding-top: var(--spacing-xl);
   padding-bottom: var(--spacing-2xl);
   position: relative;
+  /* 点阵装饰背景，增强页面质感 */
   background-image: radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
   background-size: 24px 24px;
 }

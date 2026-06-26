@@ -1,3 +1,4 @@
+<!-- HeroSection — 首页顶部横幅，展示标题、副标题、操作按钮和统计数据 -->
 <template>
   <section class="hero">
     <div class="hero-content container-wide">
@@ -21,6 +22,7 @@
         </div>
       </div>
     </div>
+    <!-- 底部斜纹装饰条 -->
     <div class="hero-wave"></div>
   </section>
 </template>
@@ -48,9 +50,10 @@ export default {
       type: Object,
       default: () => ({
         text: '最新专辑 ↓',
-        action: null
+        action: null // 实际点击逻辑通过 emit 'secondary-action-click' 交给父组件处理
       })
     },
+    // 默认值为占位数据，父组件应传入真实统计
     stats: {
       type: Array,
       default: () => [
@@ -107,7 +110,7 @@ export default {
 .wave-icon {
   display: inline-block;
   margin-right: 12px;
-  filter: drop-shadow(0 0 6px var(--color-accent));
+  filter: drop-shadow(0 0 6px var(--color-accent)); /* 主题色发光效果 */
 }
 
 .hero-subtitle {
@@ -162,7 +165,7 @@ export default {
   display: flex;
   gap: 2rem;
   background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px); /* 磨砂玻璃效果，与项目暗色主题一致 */
   padding: 1.5rem 2rem;
   border: 1px solid var(--color-border);
   flex-shrink: 0;
@@ -186,6 +189,7 @@ export default {
   margin-top: 0.3rem;
 }
 
+/* 45° 斜纹装饰条，使用主题色半透明重复渐变 */
 .hero-wave {
   position: absolute;
   bottom: -2px;
