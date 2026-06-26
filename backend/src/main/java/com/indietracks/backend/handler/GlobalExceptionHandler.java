@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // RuntimeException 在项目中作为业务异常使用，故返回 400 而非 500
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException e) {
         return ResponseEntity.badRequest()
@@ -23,7 +24,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .map(err -> err.getField() + ": " + err.getDefaultMessage())
-                .findFirst()
+                .findFirst() // 只返回首个校验错误，避免响应过长
                 .orElse("参数校验失败");
         return ResponseEntity.badRequest()
                 .body(ErrorResponse.of(message, HttpStatus.BAD_REQUEST.value()));
@@ -35,6 +36,7 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(e.getMessage(), HttpStatus.BAD_REQUEST.value()));
     }
 
+    // 吞掉真实异常信息，避免泄露内部细节
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

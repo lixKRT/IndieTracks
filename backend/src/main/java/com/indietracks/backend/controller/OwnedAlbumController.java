@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/** 已购专辑接口 — 查询列表、购买、检查购买状态 */
 @RestController
 @RequestMapping("/api/purchases")
 public class OwnedAlbumController {
@@ -19,6 +20,7 @@ public class OwnedAlbumController {
         this.ownedAlbumService = ownedAlbumService;
     }
 
+    // @CurrentUser: 自定义注解，从 JWT 中提取当前登录用户 ID（下同）
     @GetMapping
     public ResponseEntity<List<AlbumListItem>> getOwnedAlbums(@CurrentUser Integer userId) {
         return ResponseEntity.ok(ownedAlbumService.getOwnedAlbums(userId));

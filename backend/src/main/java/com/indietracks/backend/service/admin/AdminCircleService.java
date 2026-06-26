@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/** 管理端社团服务 — 列表、详情、编辑、删除 */
 @Service
 public class AdminCircleService {
 
@@ -27,6 +28,7 @@ public class AdminCircleService {
         int offset = (page - 1) * pageSize;
         String whereClause = "";
         if (search != null && !search.isBlank()) {
+            // ILIKE: PostgreSQL 大小写不敏感匹配
             whereClause = " WHERE c.name ILIKE '%" + search + "%'";
         }
 
@@ -45,6 +47,7 @@ public class AdminCircleService {
             applyUrlPrefix(circle, "logo_url");
         }
 
+        // 去掉 WHERE 中的表别名前缀 "c."，count 为单表查询无需限定
         Integer total = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM circles c" + whereClause.replace("c.name", "name"), Integer.class);
 
@@ -67,6 +70,7 @@ public class AdminCircleService {
         detail.put("description", circle.getDescription());
         detail.put("member_count", circle.getMember_count());
 
+        // user_circles 关联表：记录社团成员关系
         List<Map<String, Object>> members = jdbcTemplate.queryForList(
             "SELECT u.user_id, u.username, u.avatar_url, u.user_role " +
             "FROM users u JOIN user_circles uc ON u.user_id = uc.user_id " +
@@ -79,6 +83,7 @@ public class AdminCircleService {
         return detail;
     }
 
+    /** 非绝对路径的 MinIO 对象 Key 补全为 Nginx 代理路径 */
     private void applyUrlPrefix(Map<String, Object> item, String field) {
         Object value = item.get(field);
         if (value instanceof String url && !url.isBlank() && !url.startsWith("http")) {
@@ -93,6 +98,7 @@ public class AdminCircleService {
         return url;
     }
 
+    /** 部分更新：仅修改 body 中包含的字段 */
     public void updateCircle(Integer circleId, Map<String, Object> body) {
         Circle circle = circleMapper.selectById(circleId);
         if (circle == null) return;

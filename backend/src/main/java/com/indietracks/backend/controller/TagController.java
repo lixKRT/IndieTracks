@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 标签接口 — 获取热门标签列表 */
 @RestController
 @RequestMapping("/api/tags")
 public class TagController {
@@ -21,6 +22,6 @@ public class TagController {
 
     @GetMapping
     public ResponseEntity<List<Tag>> getTags() {
-        return ResponseEntity.ok(tagService.getTopTags(30));
+        return ResponseEntity.ok(tagService.getTopTags(30)); // 返回使用量前 30 的标签
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/** 购物车接口 — 增删查、数量、结算；cart_items 为临时关联，结算后清空 */
 @RestController
 @RequestMapping("/api/cart")
 public class CartController {
@@ -47,6 +48,7 @@ public class CartController {
         return ResponseEntity.ok(Map.of("in_cart", inCart));
     }
 
+    // 请求体: { "album_ids": [1, 2, 3] }
     @PostMapping("/checkout")
     public ResponseEntity<?> checkout(@CurrentUser Integer userId, @RequestBody Map<String, List<Integer>> body) {
         List<Integer> albumIds = body.get("album_ids");

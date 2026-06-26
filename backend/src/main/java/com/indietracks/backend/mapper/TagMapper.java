@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
+/** 标签（tags 表） */
 @Mapper
 public interface TagMapper extends BaseMapper<Tag> {
 

@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+/** 认证服务 — 注册、登录、JWT 生成、用户信息 */
 @Service
 public class AuthService {
 
@@ -39,13 +40,14 @@ public class AuthService {
         User user = new User();
         user.setUsername(req.getUsername());
         user.setEmail(req.getEmail());
-        user.setPassword_hash(passwordEncoder.encode(req.getPassword()));
-        user.setUser_role("normal");
+        user.setPassword_hash(passwordEncoder.encode(req.getPassword())); // BCrypt 加密
+        user.setUser_role("normal"); // 默认角色，可选值: normal, pro, staff
         userMapper.insert(user);
 
         return toDTO(user);
     }
 
+    /** account 支持用户名或邮箱登录 */
     public UserDTO login(LoginRequest req) {
         User user = userMapper.selectOne(
                 new LambdaQueryWrapper<User>()
@@ -60,6 +62,7 @@ public class AuthService {
         return toDTO(user);
     }
 
+    /** rememberMe 控制 JWT 过期时长 */
     public String generateToken(UserDTO user, boolean rememberMe) {
         return jwtUtil.generateToken(user.getUser_id(), user.getUsername(), rememberMe);
     }
@@ -72,6 +75,7 @@ public class AuthService {
         return dto;
     }
 
+    /** objectKey 为 MinIO 对象 Key，非完整 URL */
     public void updateAvatar(Integer userId, String objectKey) {
         User user = userMapper.selectById(userId);
         if (user != null) {

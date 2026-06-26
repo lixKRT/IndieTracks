@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 用户主页接口 — 查看任意用户的公开资料、收藏、关注的社团和用户 */
 @RestController
 @RequestMapping("/api/users")
 public class UserController {

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/** 社团关注服务 — 关注/取关、查询已关注社团列表 */
 @Service
 public class CircleFollowService {
 
@@ -36,6 +37,7 @@ public class CircleFollowService {
         return circleFollowMapper.countFollow(userId, circleId) > 0;
     }
 
+    /** 返回列表中每个社团附带代表性标签和最新专辑预览 */
     public List<CircleListItem> getFollowedCircles(Integer userId) {
         List<CircleListItem> circles = circleFollowMapper.selectFollowedCircles(userId);
         if (circles.isEmpty()) return circles;
@@ -61,6 +63,7 @@ public class CircleFollowService {
         return circles;
     }
 
+    /** 按出现频率降序取前 N 个标签 */
     private List<String> extractTopTags(List<AlbumListItem> albums, int limit) {
         Map<String, Integer> tagFreq = new HashMap<>();
         for (AlbumListItem album : albums) {
@@ -77,6 +80,7 @@ public class CircleFollowService {
                 .toList();
     }
 
+    /** 按发布日期降序取前 limit 个专辑，每张最多保留 2 个标签，null 日期排末尾 */
     private List<CircleListItem.PreviewAlbum> buildPreviewAlbums(List<AlbumListItem> albums, int limit) {
         return albums.stream()
                 .sorted((a, b) -> {

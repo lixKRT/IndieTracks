@@ -11,7 +11,8 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 /**
- * 解析 @CurrentUser 注解，从 SecurityContext 中提取用户 ID
+ * 解析 @CurrentUser 注解，从 SecurityContext 中提取用户 ID。
+ * userId 由 JwtAuthFilter 验证 JWT 后写入 Authentication.principal
  */
 @Component
 public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolver {
@@ -31,6 +32,6 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
         if (auth != null && auth.getPrincipal() instanceof Integer userId) {
             return userId;
         }
-        return null;
+        return null; // 未认证时参数为 null，Controller 可据此判断游客
     }
 }

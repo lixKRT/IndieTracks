@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/** 专辑服务 — 列表分页、详情、随机推荐 */
 @Service
 public class AlbumService {
 
@@ -22,6 +23,12 @@ public class AlbumService {
         this.urlPresign = urlPresign;
     }
 
+    /**
+     * @param tag    可选筛选，标签名
+     * @param search 可选筛选，关键词
+     * @param price  可选筛选，格式 "min,max"
+     * @param sort   可选值: publish_date_desc, price_asc, price_desc
+     */
     public IPage<AlbumListItem> getAlbumList(int page, int pageSize, String tag, String search, String price, String sort) {
         Page<AlbumListItem> pageParam = new Page<>(page, pageSize);
         IPage<AlbumListItem> result = albumMapper.selectAlbumList(pageParam, tag, search, price, sort);
@@ -49,10 +56,10 @@ public class AlbumService {
         // 标签
         detail.setTags(albumMapper.selectTagsByAlbumId(albumId));
 
-        // 曲目 + 预签名 URL
+        // 曲目 + 拼接 MinIO 对象 Key（后续统一预签名转为可访问 URL）
         List<AlbumDetail.TrackInfo> tracks = albumMapper.selectTracksByAlbumId(albumId);
         for (AlbumDetail.TrackInfo track : tracks) {
-            track.setPreview_url(getObjectKeyFromTrack(track, album));
+            track.setPreview_url(getObjectKeyFromTrack(track, album)); // 此处赋的是 objectKey，非最终 URL
         }
         detail.setTracks(tracks);
 
@@ -73,10 +80,15 @@ public class AlbumService {
         return results;
     }
 
+    /**
+     * 根据曲目信息拼接 MinIO 对象 Key
+     * file_type 可选值: preview, full
+     * 文件名格式: 三位数序号，如 001.mp3
+     */
     private String getObjectKeyFromTrack(AlbumDetail.TrackInfo track, Album album) {
         if (track.getFile_type() == null) return null;
         String prefix = "preview".equals(track.getFile_type()) ? "audio/preview/" : "audio/full/";
-        String slug = album.getDizzylab_id();
+        String slug = album.getDizzylab_id(); // dizzylab 唯一标识，用作目录名
         String filename = String.format("%03d.mp3", track.getSort_order());
         return prefix + slug + "/" + filename;
     }

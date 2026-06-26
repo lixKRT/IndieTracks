@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+/** MinIO 服务 — 根据对象 Key 拼接可访问 URL（非真正预签名） */
 @Service
 public class MinioService {
 

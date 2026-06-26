@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+/** 评论提交请求 DTO */
 @Data
 public class CommentRequest {
     @NotBlank(message = "评论内容不能为空")

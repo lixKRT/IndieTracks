@@ -7,12 +7,16 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * URL 预签名统一工具 — 消灭 7 个 service 中散落的 minioService.getPresignedUrl() 调用
+ * URL 预签名统一工具 — 集中处理 DTO 中的 MinIO objectKey → 临时签名 URL 转换。
+ * 将各 service 中散落的 minioService.getPresignedUrl() 调用收拢到一处，避免重复代码。
  *
  * 用法:
  *   urlPresignHelper.presignAlbumList(albums);
  *   urlPresignHelper.presignCircleList(circles);
  *   urlPresignHelper.presignDetail(detail);
+ *
+ * <p>所有字段传入时应为 MinIO objectKey（如 "cover/abc.jpg"），
+ * 调用后原地替换为带签名的临时访问 URL。</p>
  */
 @Component
 public class UrlPresignHelper {
@@ -36,6 +40,7 @@ public class UrlPresignHelper {
         item.setCircle_logo_url(url(item.getCircle_logo_url()));
     }
 
+    /** 预签名专辑详情 — 含封面、社团 logo、评论头像；嵌套对象逐层处理 */
     public void presignAlbumDetail(AlbumDetail detail) {
         if (detail == null) return;
         detail.setCover_url(url(detail.getCover_url()));
@@ -43,7 +48,7 @@ public class UrlPresignHelper {
             detail.getCircle().setLogo_url(url(detail.getCircle().getLogo_url()));
         }
         if (detail.getTracks() != null) {
-            // tracks 的 preview_url 由调用方构造 objectKey 后传入
+            // tracks 的 preview_url 由调用方构造 objectKey 后传入，此处不处理
         }
         presignComments(detail.getComments());
     }
@@ -65,6 +70,7 @@ public class UrlPresignHelper {
         item.setLogo_url(url(item.getLogo_url()));
     }
 
+    /** 预签名社团详情 — 含 logo、关联专辑列表、成员头像 */
     public void presignCircleDetail(CircleDetail detail) {
         if (detail == null) return;
         detail.setLogo_url(url(detail.getLogo_url()));
@@ -102,6 +108,7 @@ public class UrlPresignHelper {
 
     // ===== 内部 =====
 
+    /** objectKey → 带签名的临时访问 URL（可为 null，MinIO 层会处理） */
     private String url(String objectKey) {
         return minioService.getPresignedUrl(objectKey);
     }

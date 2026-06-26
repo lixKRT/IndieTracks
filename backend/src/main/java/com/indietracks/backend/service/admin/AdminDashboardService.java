@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 
+/** 管理端仪表盘服务 — Staff 全局统计 / Pro 仅所属社团统计 */
 @Service
 public class AdminDashboardService {
 
@@ -121,6 +122,7 @@ public class AdminDashboardService {
             return stats;
         }
 
+        // List<Integer> 转逗号分隔字符串，拼入 SQL IN 子句
         String circleIdStr = circleIds.toString().replace("[", "").replace("]", "");
 
         Integer albumCount = jdbcTemplate.queryForObject(
@@ -175,6 +177,7 @@ public class AdminDashboardService {
             "ORDER BY favorite_count DESC LIMIT " + limit);
     }
 
+    /** 预留接口，Pro 视角下社团排行暂不实现 */
     public List<Map<String, Object>> getProTopCircles(Integer userId, String period, int limit) {
         return Collections.emptyList();
     }
@@ -194,14 +197,16 @@ public class AdminDashboardService {
             "ORDER BY album_count DESC LIMIT 30");
     }
 
+    /** 返回 SQL 表达式片段（非绑定参数），可直接拼入查询 */
     private String getDateFilter(String period) {
         return switch (period) {
             case "week" -> "CURRENT_DATE - INTERVAL '7 days'";
             case "month" -> "CURRENT_DATE - INTERVAL '30 days'";
-            default -> "'2000-01-01'";
+            default -> "'2000-01-01'"; // 无时间限制，返回全量数据
         };
     }
 
+    /** 非绝对路径的 MinIO 对象 Key 补全为 Nginx 代理路径 */
     private void applyUrlPrefix(Map<String, Object> item, String field) {
         Object value = item.get(field);
         if (value instanceof String url && !url.isBlank() && !url.startsWith("http") && !url.startsWith("/minio")) {

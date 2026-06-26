@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/** 评论服务 — 分页查询、新增、编辑、删除（仅限本人） */
 @Service
 public class CommentService {
 
@@ -28,6 +29,7 @@ public class CommentService {
         return PagedResponse.of(comments, total, page, pageSize);
     }
 
+    /** 插入后查询最新一条评论返回（含自动生成的 id 和时间戳） */
     public AlbumDetail.CommentInfo addComment(Integer albumId, Integer userId, String content) {
         Comment comment = new Comment();
         comment.setAlbum_id(albumId);
@@ -43,6 +45,7 @@ public class CommentService {
         return null;
     }
 
+    /** 校验评论归属，非本人返回 false */
     public boolean updateComment(Integer commentId, Integer userId, String content) {
         Comment comment = commentMapper.selectById(commentId);
         if (comment == null || !comment.getUser_id().equals(userId)) return false;
@@ -51,6 +54,7 @@ public class CommentService {
         return true;
     }
 
+    /** 校验评论归属，非本人返回 false */
     public boolean deleteComment(Integer commentId, Integer userId) {
         Comment comment = commentMapper.selectById(commentId);
         if (comment == null || !comment.getUser_id().equals(userId)) return false;

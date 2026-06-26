@@ -10,11 +10,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/** 管理后台 — 用户管理服务：分页查询、修改角色、删除用户 */
 @Service
 public class AdminUserService {
 
     private final UserMapper userMapper;
-    private final JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbcTemplate; // 用于手动拼接带筛选条件的复杂 SQL
     private final UrlPresignHelper urlPresign;
 
     public AdminUserService(UserMapper userMapper, JdbcTemplate jdbcTemplate, UrlPresignHelper urlPresign) {
@@ -23,6 +24,7 @@ public class AdminUserService {
         this.urlPresign = urlPresign;
     }
 
+    /** @param role 可选筛选，可选值: normal, pro, staff */
     public Map<String, Object> getUsers(int page, int pageSize, String search, String role) {
         int offset = (page - 1) * pageSize;
         StringBuilder whereClause = new StringBuilder(" WHERE 1=1");
@@ -39,7 +41,7 @@ public class AdminUserService {
             " ORDER BY u.user_id DESC " +
             "LIMIT " + pageSize + " OFFSET " + offset);
 
-        // 应用 URL 前缀
+        // MinIO 对象 Key → Nginx 代理路径前缀
         for (Map<String, Object> user : users) {
             Object avatarUrl = user.get("avatar_url");
             if (avatarUrl instanceof String url && !url.isBlank() && !url.startsWith("http")) {
@@ -58,6 +60,7 @@ public class AdminUserService {
         return result;
     }
 
+    /** 仅允许修改 user_role 字段，其余字段忽略 */
     public void updateUser(Integer userId, Map<String, Object> body) {
         User user = userMapper.selectById(userId);
         if (user == null) return;

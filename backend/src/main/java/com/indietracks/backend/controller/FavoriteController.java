@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/** 收藏接口 — 收藏列表、收藏/取消收藏、查询收藏状态 */
 @RestController
 @RequestMapping("/api/favorites")
 public class FavoriteController {

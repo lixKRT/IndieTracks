@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/** 社团服务 — 列表（全量/分页）、详情、成员 */
 @Service
 public class CircleService {
 
@@ -33,6 +34,7 @@ public class CircleService {
         return circles;
     }
 
+    /** 返回 {data, total, page, page_size} 结构 */
     public Map<String, Object> getCircleListPaged(int page, int pageSize) {
         int offset = (page - 1) * pageSize;
         List<CircleListItem> circles = circleMapper.selectCircleListPaged(offset, pageSize);
@@ -50,6 +52,7 @@ public class CircleService {
         return result;
     }
 
+    /** 批量加载社团的专辑，填充代表性标签和预览专辑 */
     private void enrichCircles(List<CircleListItem> circles) {
         List<Integer> circleIds = circles.stream().map(CircleListItem::getCircle_id).toList();
         List<AlbumListItem> allAlbums = albumMapper.selectAlbumsByCircleIds(circleIds);
@@ -92,6 +95,7 @@ public class CircleService {
         return detail;
     }
 
+    /** 按出现频率降序取前 N 个标签 */
     private List<String> extractTopTags(List<AlbumListItem> albums, int limit) {
         Map<String, Integer> tagFreq = new HashMap<>();
         for (AlbumListItem album : albums) {
@@ -108,6 +112,7 @@ public class CircleService {
                 .toList();
     }
 
+    /** 按发布日期降序取前 limit 个专辑，每张最多保留 2 个标签，null 日期排末尾 */
     private List<CircleListItem.PreviewAlbum> buildPreviewAlbums(List<AlbumListItem> albums, int limit) {
         return albums.stream()
                 .sorted((a, b) -> {

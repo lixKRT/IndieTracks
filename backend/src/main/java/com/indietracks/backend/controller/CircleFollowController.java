@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+/** 社团关注接口 — 关注、取消关注、查询关注状态 */
 @RestController
 @RequestMapping("/api/circle-follows")
 public class CircleFollowController {

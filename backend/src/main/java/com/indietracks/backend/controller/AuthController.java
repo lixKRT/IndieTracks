@@ -21,13 +21,14 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.UUID;
 
+/** 认证相关接口 — 注册、登录、登出、用户信息、头像上传 */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     private static final String COOKIE_NAME = "indietracks_token";
-    private static final int COOKIE_MAX_AGE = 7 * 24 * 3600;
-    private static final int COOKIE_REMEMBER_ME_MAX_AGE = 30 * 24 * 3600;
+    private static final int COOKIE_MAX_AGE = 7 * 24 * 3600;            // 7 天（秒）
+    private static final int COOKIE_REMEMBER_ME_MAX_AGE = 30 * 24 * 3600; // 30 天（秒）
 
     private final AuthService authService;
     private final MinioService minioService;
@@ -35,7 +36,7 @@ public class AuthController {
     private final UrlPresignHelper urlPresign;
 
     @Value("${minio.bucket}")
-    private String bucket;
+    private String bucket; // MinIO 存储桶名称
 
     public AuthController(AuthService authService, MinioService minioService,
                           MinioClient minioClient, UrlPresignHelper urlPresign) {
@@ -92,6 +93,7 @@ public class AuthController {
         try {
             String ext = file.getOriginalFilename();
             ext = ext != null && ext.contains(".") ? ext.substring(ext.lastIndexOf(".")) : ".jpg";
+            // MinIO 对象 Key，格式 avatars/{userId}_{uuid}.{ext}
             String objectKey = "avatars/" + userId + "_" + UUID.randomUUID() + ext;
 
             try (InputStream is = file.getInputStream()) {

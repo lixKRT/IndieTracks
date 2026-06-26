@@ -11,14 +11,15 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-@MappedTypes(List.class)
-@MappedJdbcTypes(JdbcType.ARRAY)
+/** MyBatis TypeHandler — 桥接 PostgreSQL text[] 与 Java List<String> */
+@MappedTypes(List.class)      // 告诉 MyBatis 此 handler 处理 List 类型
+@MappedJdbcTypes(JdbcType.ARRAY) // 对应 JDBC ARRAY 类型
 public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
 
     @Override
     public void setNonNullParameter(PreparedStatement ps, int i, List<String> parameter, JdbcType jdbcType) throws SQLException {
         Connection conn = ps.getConnection();
-        Array array = conn.createArrayOf("varchar", parameter.toArray(new String[0]));
+        Array array = conn.createArrayOf("varchar", parameter.toArray(new String[0])); // "varchar" 映射到 pg 的 text[]
         ps.setArray(i, array);
     }
 
@@ -37,6 +38,7 @@ public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
         return toList(cs.getArray(columnIndex));
     }
 
+    // null 安全：pg 数组为 null 时返回空集合而非 null
     private List<String> toList(Array array) throws SQLException {
         if (array == null) {
             return Collections.emptyList();

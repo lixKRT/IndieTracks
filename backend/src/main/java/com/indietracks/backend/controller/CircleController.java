@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/** 社团（Circle）相关接口 — 列表、详情 */
 @RestController
 @RequestMapping("/api/circles")
 public class CircleController {

@@ -7,6 +7,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 
+/** Web MVC 配置 — 注册 @CurrentUser 自定义参数解析器 */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 

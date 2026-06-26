@@ -9,11 +9,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/** 管理后台 — 标签管理服务：分页查询、增删改 */
 @Service
 public class AdminTagService {
 
     private final TagMapper tagMapper;
-    private final JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbcTemplate; // 用于手动拼接带聚合函数的复杂 SQL
 
     public AdminTagService(TagMapper tagMapper, JdbcTemplate jdbcTemplate) {
         this.tagMapper = tagMapper;
@@ -36,6 +37,7 @@ public class AdminTagService {
             "ORDER BY t.tag_id " +
             "LIMIT " + pageSize + " OFFSET " + offset);
 
+        // count 查询无表别名，需去掉 "t." 前缀
         Integer total = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM tags" + whereClause.replace("t.name", "name"), Integer.class);
 

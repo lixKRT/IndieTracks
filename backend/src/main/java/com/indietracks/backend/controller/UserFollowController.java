@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+/** 用户关注接口 — 关注、取关、查询关注状态 */
 @RestController
 @RequestMapping("/api/user-follows")
 public class UserFollowController {

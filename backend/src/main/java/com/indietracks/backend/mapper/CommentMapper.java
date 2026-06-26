@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
+/** 专辑评论（comments 表），user_id SET NULL / album_id CASCADE */
 @Mapper
 public interface CommentMapper extends BaseMapper<Comment> {
 

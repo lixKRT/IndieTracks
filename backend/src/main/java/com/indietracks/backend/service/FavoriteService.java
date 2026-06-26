@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/** 收藏服务 — 收藏/取消收藏、查询已收藏列表 */
 @Service
 public class FavoriteService {
 

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+/** 评论管理接口 — 编辑、删除（仅限本人评论） */
 @RestController
 @RequestMapping("/api/comments")
 public class CommentController {

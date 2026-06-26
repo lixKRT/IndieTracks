@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.UUID;
 
+/** 管理后台文件上传 — 封面、头像、Logo、音频，存储到 MinIO */
 @RestController
 @RequestMapping("/api/admin/upload")
 public class AdminUploadController {
@@ -18,7 +19,7 @@ public class AdminUploadController {
     private final MinioClient minioClient;
 
     @Value("${minio.bucket}")
-    private String bucket;
+    private String bucket; // MinIO 桶名，配置文件中定义
 
     public AdminUploadController(MinioClient minioClient) {
         this.minioClient = minioClient;
@@ -44,6 +45,11 @@ public class AdminUploadController {
         return uploadFile(file, "audio/preview/");
     }
 
+    /**
+     * 通用文件上传逻辑
+     * @param prefix MinIO 对象 Key 前缀，如 "covers/"、"audio/preview/"
+     * @return url — Nginx 代理访问路径；object_key — MinIO 对象 Key，前端拼接完整地址
+     */
     private ResponseEntity<?> uploadFile(MultipartFile file, String prefix) {
         try {
             String originalFilename = file.getOriginalFilename();
@@ -58,13 +64,13 @@ public class AdminUploadController {
                     PutObjectArgs.builder()
                         .bucket(bucket)
                         .object(objectKey)
-                        .stream(is, file.getSize(), -1)
+                        .stream(is, file.getSize(), -1) // -1 表示未知分片大小，由 SDK 自动处理
                         .contentType(file.getContentType())
                         .build()
                 );
             }
 
-            String url = "/minio/" + bucket + "/" + objectKey;
+            String url = "/minio/" + bucket + "/" + objectKey; // Nginx 代理路径，非 MinIO 直连地址
             return ResponseEntity.ok(Map.of("url", url, "object_key", objectKey));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", "上传失败: " + e.getMessage()));
