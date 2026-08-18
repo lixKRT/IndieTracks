@@ -130,6 +130,14 @@ else
     bash "$SCRIPT_DIR/setup-minio.sh"
 fi
 
+# ── Storage check ─────────────────────────────
+step "本地存储检测"
+if [ -f "$SCRIPT_DIR/check-storage.sh" ]; then
+    bash "$SCRIPT_DIR/check-storage.sh"
+else
+    error "本地存储检测脚本不存在: $SCRIPT_DIR/check-storage.sh"
+fi
+
 # ── Mode ────────────────────────────────────────
 banner "选择爬取模式"
 echo "  [1] 首次爬取 (full 模式，依次运行所有爬虫)"
